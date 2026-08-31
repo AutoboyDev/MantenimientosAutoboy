@@ -2,6 +2,8 @@ import { HttpException, Injectable } from '@nestjs/common';
 import { compareSync, hashSync } from 'bcryptjs';
 import { DataSource, Repository } from 'typeorm';
 import { Usuario } from '../../../models/usuario/usuario.entity';
+import { Inventario } from '../../../models/inventario/inventario.entity';
+import { Mantenimiento } from '../../../models/mantenimiento/mantenimiento.entity';
 import { GenerarToken } from '../../../utilities/funciones/generar-token/generar-token';
 
 @Injectable()
@@ -72,5 +74,37 @@ export class AutenticacionService {
         role: saved.role
       }
     }, 201);
+  }
+
+  public async consultarEquipoPublico(buscar: string): Promise<any> {
+    if (!buscar || !buscar.trim()) {
+      throw new HttpException('El término de búsqueda (Serial o No. Inventario) es requerido.', 400);
+    }
+    const cleanBuscar = buscar.trim();
+
+    const inventarioRepo = this.poolConexion.getRepository(Inventario);
+    const mantenimientoRepo = this.poolConexion.getRepository(Mantenimiento);
+
+    const equipo = await inventarioRepo.findOne({
+      where: [
+        { serial: cleanBuscar },
+        { noInventario: cleanBuscar }
+      ],
+      relations: ['agencia']
+    });
+
+    if (!equipo) {
+      throw new HttpException('Recurso tecnológico no encontrado en el inventario.', 404);
+    }
+
+    const mantenimientos = await mantenimientoRepo.find({
+      where: { idEquipo: equipo.id },
+      order: { fecha: 'DESC' }
+    });
+
+    return {
+      equipo,
+      mantenimientos
+    };
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Post, Req } from '@nestjs/common';
+import { Controller, Post, Get, Param, Req } from '@nestjs/common';
 import { AutenticacionService } from './autenticacion.service';
 
 @Controller('auth')
@@ -15,5 +15,10 @@ export class AutenticacionController {
   private registroInicial(@Req() request: any) {
     const objUsuario = request.body;
     return this.autenticacionService.registroInicial(objUsuario);
+  }
+
+  @Get('/query/:buscar')
+  private consultarEquipoPublico(@Param('buscar') buscar: string) {
+    return this.autenticacionService.consultarEquipoPublico(buscar);
   }
 }

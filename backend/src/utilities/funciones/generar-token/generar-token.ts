@@ -12,7 +12,7 @@ export class GenerarToken {
         rol: respuesta.role
       },
       String(process.env.SECRET_PASSWORD),
-      { expiresIn: '8h' }
+      { expiresIn: '12h' }
     );
     return token;
   }

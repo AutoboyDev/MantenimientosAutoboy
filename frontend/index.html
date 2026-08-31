@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Autoboy - Control de Mantenimientos Tecnológicos</title>
+    <meta name="description" content="Sistema de Mantenimientos Tecnológicos de Autoboy. Control de inventario de equipos de cómputo y registro de mantenimientos correctivos y preventivos." />
+    <script>
+      (function() {
+        const saved = localStorage.getItem('autoboy_mantenimientos_theme');
+        if (saved) {
+          document.documentElement.setAttribute('data-theme', saved);
+        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
