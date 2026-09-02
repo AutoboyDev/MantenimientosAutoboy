@@ -80,7 +80,8 @@ import { AuditLog } from '../../models/audit-log/audit-log.entity';
               ADD COLUMN IF NOT EXISTS cedula_usuario VARCHAR(50),
               ADD COLUMN IF NOT EXISTS quien_entrega VARCHAR(100),
               ADD COLUMN IF NOT EXISTS responsable_anterior VARCHAR(100),
-              ADD COLUMN IF NOT EXISTS valor_estimado VARCHAR(50);
+              ADD COLUMN IF NOT EXISTS valor_estimado VARCHAR(50),
+              ADD COLUMN IF NOT EXISTS accesorios JSONB DEFAULT '[]'::jsonb;
             `);
             console.log("Esquema de base de datos verificado y actualizado con soporte de telefonía y vida útil.");
           } catch (migErr) {

@@ -85,10 +85,26 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
     return t.includes('celular') || t.includes('teléfono') || t.includes('telefono') || t.includes('móvil') || t.includes('movil') || t.includes('smartphone') || !!eq?.imei1 || !!eq?.numeroLinea;
   };
 
+  // Helper para extraer accesorios dinámicos o convertir campos legacy
+  const getEquipmentAccessories = (eq: any): Array<{ tipo: string; codigoActivo?: string; marca: string; modelo: string; serial: string }> => {
+    if (Array.isArray(eq?.accesorios) && eq.accesorios.length > 0) {
+      return eq.accesorios;
+    }
+    const list: Array<{ tipo: string; codigoActivo?: string; marca: string; modelo: string; serial: string }> = [];
+    if (eq?.teclado) list.push({ tipo: 'Teclado', codigoActivo: '', marca: '', modelo: '', serial: eq.teclado });
+    if (eq?.mouse) list.push({ tipo: 'Mouse', codigoActivo: '', marca: '', modelo: '', serial: eq.mouse });
+    if (eq?.impresora) list.push({ tipo: 'Impresora', codigoActivo: '', marca: '', modelo: '', serial: eq.impresora });
+    if (eq?.otros) list.push({ tipo: 'Otros', codigoActivo: '', marca: '', modelo: '', serial: eq.otros });
+    if (eq?.cargadorMarca || eq?.cargadorSerial) {
+      list.push({ tipo: 'Cargador', codigoActivo: '', marca: eq.cargadorMarca || '', modelo: '', serial: eq.cargadorSerial || '' });
+    }
+    return list;
+  };
+
   // Form Data de Agencias
   const [agencyForm, setAgencyForm] = useState({ nombre: '' });
 
-  // Form Data de Equipos (Computador + Telefonía + Vida Útil)
+  // Form Data de Equipos (Computador + Telefonía + Vida Útil + Accesorios Dinámicos)
   const [equipForm, setEquipForm] = useState({
     idAgencia: '',
     noInventario: '',
@@ -125,7 +141,12 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
     cargadorMarca: '',
     cargadorSerial: '',
     cargadorFechaCompra: '',
-    observaciones: ''
+    observaciones: '',
+    // Accesorios Dinámicos
+    accesorios: [
+      { id: 1, tipo: 'Teclado', codigoActivo: '', marca: '', modelo: '', serial: '' },
+      { id: 2, tipo: 'Mouse', codigoActivo: '', marca: '', modelo: '', serial: '' }
+    ] as Array<{ id: number | string; tipo: string; codigoActivo?: string; marca: string; modelo: string; serial: string; }>
   });
 
   // Form Data de Mantenimientos
@@ -446,7 +467,11 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                       cargadorMarca: '',
                       cargadorSerial: '',
                       cargadorFechaCompra: '',
-                      observaciones: ''
+                      observaciones: '',
+                      accesorios: [
+                        { id: 1, tipo: 'Teclado', codigoActivo: '', marca: '', modelo: '', serial: '' },
+                        { id: 2, tipo: 'Mouse', codigoActivo: '', marca: '', modelo: '', serial: '' }
+                      ]
                     });
                     setModalType('EQUIPMENT');
                     setModalOpen(true);
@@ -653,7 +678,13 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                                         cargadorMarca: eq.cargadorMarca || '',
                                         cargadorSerial: eq.cargadorSerial || '',
                                         cargadorFechaCompra: eq.cargadorFechaCompra || '',
-                                        observaciones: eq.observaciones || ''
+                                        observaciones: eq.observaciones || '',
+                                        accesorios: (() => {
+                                          const accs = getEquipmentAccessories(eq);
+                                          return accs.length > 0
+                                            ? accs.map((a, i) => ({ id: i + 1, tipo: a.tipo || '', codigoActivo: a.codigoActivo || '', marca: a.marca || '', modelo: a.modelo || '', serial: a.serial || '' }))
+                                            : [{ id: 1, tipo: isPhone(eq) ? 'Cargador' : 'Teclado', codigoActivo: '', marca: '', modelo: '', serial: '' }];
+                                        })()
                                       });
                                       setModalType('EQUIPMENT');
                                       setModalOpen(true);
@@ -1836,16 +1867,6 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                         />
                       </div>
                     </div>
-
-                    <div className="nm-card-sunken" style={{ padding: '1rem' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Periféricos y Accesorios de PC</span>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginTop: '0.5rem' }}>
-                        <input type="text" placeholder="Teclado" className="nm-input" value={equipForm.teclado} onChange={(e) => setEquipForm({ ...equipForm, teclado: e.target.value })} />
-                        <input type="text" placeholder="Mouse" className="nm-input" value={equipForm.mouse} onChange={(e) => setEquipForm({ ...equipForm, mouse: e.target.value })} />
-                        <input type="text" placeholder="Impresora" className="nm-input" value={equipForm.impresora} onChange={(e) => setEquipForm({ ...equipForm, impresora: e.target.value })} />
-                        <input type="text" placeholder="Otros periféricos" className="nm-input" value={equipForm.otros} onChange={(e) => setEquipForm({ ...equipForm, otros: e.target.value })} />
-                      </div>
-                    </div>
                   </>
                 )}
 
@@ -1926,26 +1947,181 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                         </div>
                       </div>
                     </div>
-
-                    <div className="nm-card-sunken" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>Accesorios del Teléfono (Cargador)</span>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Marca / Modelo Cargador</label>
-                          <input type="text" placeholder="Ej: JUQU / Original Samsung" className="nm-input" value={equipForm.cargadorMarca} onChange={(e) => setEquipForm({ ...equipForm, cargadorMarca: e.target.value })} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Serial Cargador</label>
-                          <input type="text" placeholder="Serial o N/A" className="nm-input" value={equipForm.cargadorSerial} onChange={(e) => setEquipForm({ ...equipForm, cargadorSerial: e.target.value })} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Fecha Compra Cargador</label>
-                          <input type="date" className="nm-input" value={equipForm.cargadorFechaCompra} onChange={(e) => setEquipForm({ ...equipForm, cargadorFechaCompra: e.target.value })} />
-                        </div>
-                      </div>
-                    </div>
                   </>
                 )}
+
+                {/* SECCIÓN DINÁMICA DE ACCESORIOS Y PERIFÉRICOS (PC Y TELÉFONO) */}
+                <div className="nm-card-sunken" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--primary-light)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Layers size={16} /> Accesorios y Periféricos ({equipForm.accesorios?.length || 0})
+                    </span>
+                    <button
+                      type="button"
+                      className="nm-btn nm-btn-primary"
+                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                      onClick={() => {
+                        const nextId = Date.now();
+                        setEquipForm({
+                          ...equipForm,
+                          accesorios: [
+                            ...(equipForm.accesorios || []),
+                            { id: nextId, tipo: '', codigoActivo: '', marca: '', modelo: '', serial: '' }
+                          ]
+                        });
+                      }}
+                    >
+                      <Plus size={14} /> Agregar Accesorio
+                    </button>
+                  </div>
+
+                  <datalist id="tipos-accesorios">
+                    <option value="Cargador" />
+                    <option value="Teclado" />
+                    <option value="Mouse" />
+                    <option value="Monitor" />
+                    <option value="Diadema / Audífonos" />
+                    <option value="Funda / Estuche" />
+                    <option value="Impresora" />
+                    <option value="Lápiz Óptico" />
+                    <option value="Adaptador de Corriente" />
+                    <option value="Base Refrigerante" />
+                    <option value="Otro" />
+                  </datalist>
+
+                  {(!equipForm.accesorios || equipForm.accesorios.length === 0) ? (
+                    <div style={{ padding: '0.75rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                      No hay accesorios agregados. Haz clic en "+ Agregar Accesorio" para registrar teclados, mouse, cargadores, etc.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      {equipForm.accesorios.map((acc, index) => (
+                        <div
+                          key={acc.id || index}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'minmax(100px, 1.1fr) minmax(90px, 0.9fr) minmax(90px, 0.9fr) minmax(90px, 0.9fr) minmax(90px, 0.9fr) auto',
+                            gap: '0.45rem',
+                            alignItems: 'center',
+                            padding: '0.5rem',
+                            borderRadius: 'var(--radius-sm)',
+                            background: 'var(--glass-bg)',
+                            border: '1px solid var(--glass-border-subtle)'
+                          }}
+                        >
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Tipo Accesorio *</label>
+                            <input
+                              type="text"
+                              list="tipos-accesorios"
+                              placeholder="Ej: Teclado, Cargador"
+                              className="nm-input"
+                              style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem' }}
+                              value={acc.tipo}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEquipForm({
+                                  ...equipForm,
+                                  accesorios: equipForm.accesorios.map(a => a.id === acc.id ? { ...a, tipo: val } : a)
+                                });
+                              }}
+                              required
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Cód. Activo</label>
+                            <input
+                              type="text"
+                              placeholder="Ej: ACT-001, N/A"
+                              className="nm-input"
+                              style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem' }}
+                              value={acc.codigoActivo || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEquipForm({
+                                  ...equipForm,
+                                  accesorios: equipForm.accesorios.map(a => a.id === acc.id ? { ...a, codigoActivo: val } : a)
+                                });
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Marca</label>
+                            <input
+                              type="text"
+                              placeholder="Ej: Logitech, Samsung"
+                              className="nm-input"
+                              style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem' }}
+                              value={acc.marca}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEquipForm({
+                                  ...equipForm,
+                                  accesorios: equipForm.accesorios.map(a => a.id === acc.id ? { ...a, marca: val } : a)
+                                });
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Modelo</label>
+                            <input
+                              type="text"
+                              placeholder="Ej: K120, 25W Type-C"
+                              className="nm-input"
+                              style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem' }}
+                              value={acc.modelo}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEquipForm({
+                                  ...equipForm,
+                                  accesorios: equipForm.accesorios.map(a => a.id === acc.id ? { ...a, modelo: val } : a)
+                                });
+                              }}
+                            />
+                          </div>
+
+                          <div>
+                            <label style={{ display: 'block', fontSize: '0.68rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Serial</label>
+                            <input
+                              type="text"
+                              placeholder="Serial o N/A"
+                              className="nm-input"
+                              style={{ padding: '0.35rem 0.5rem', fontSize: '0.8rem' }}
+                              value={acc.serial}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEquipForm({
+                                  ...equipForm,
+                                  accesorios: equipForm.accesorios.map(a => a.id === acc.id ? { ...a, serial: val } : a)
+                                });
+                              }}
+                            />
+                          </div>
+
+                          <div style={{ alignSelf: 'flex-end', paddingBottom: '2px' }}>
+                            <button
+                              type="button"
+                              className="nm-btn nm-btn-danger"
+                              style={{ padding: '0.45rem', borderRadius: 'var(--radius-sm)' }}
+                              title="Eliminar Accesorio"
+                              onClick={() => {
+                                setEquipForm({
+                                  ...equipForm,
+                                  accesorios: equipForm.accesorios.filter(a => a.id !== acc.id)
+                                });
+                              }}
+                            >
+                              <Trash2 size={14} style={{ color: 'var(--error)' }} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Observaciones Generales</label>
@@ -2216,47 +2392,40 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
 
                     {/* 4. PERIFÉRICOS / ACCESORIOS */}
                     <div className="hoja-section-title">ACCESORIOS Y PERIFERICOS</div>
-                    {phone ? (
-                      <table className="hoja-table hoja-table-grid">
-                        <thead>
-                          <tr>
-                            <th>TIPO</th>
-                            <th>FECHA COMPRA</th>
-                            <th>MARCA/MOD</th>
-                            <th>N. INV</th>
-                            <th>SERIAL</th>
-                            <th>OBS</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td>CARGADOR</td>
-                            <td>{eq.cargadorFechaCompra || eq.fechaCompra || '-'}</td>
-                            <td>{eq.cargadorMarca || eq.marca || '-'}</td>
-                            <td>{eq.noInventario}</td>
-                            <td>{eq.cargadorSerial || 'N/A'}</td>
-                            <td>-</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    ) : (
-                      <table className="hoja-table">
-                        <tbody>
-                          <tr>
-                            <th>Teclado</th>
-                            <td>{eq.teclado || 'N/A'}</td>
-                            <th>Mouse</th>
-                            <td>{eq.mouse || 'N/A'}</td>
-                          </tr>
-                          <tr>
-                            <th>Impresora</th>
-                            <td>{eq.impresora || 'N/A'}</td>
-                            <th>Otros</th>
-                            <td>{eq.otros || 'N/A'}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    )}
+                    {(() => {
+                      const accList = getEquipmentAccessories(eq);
+                      if (accList.length === 0) {
+                        return (
+                          <div style={{ padding: '0.6rem', border: '1px solid #cbd5e1', fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic', marginBottom: '0.5rem' }}>
+                            Sin accesorios o perifericos registrados.
+                          </div>
+                        );
+                      }
+                      return (
+                        <table className="hoja-table hoja-table-grid">
+                          <thead>
+                            <tr>
+                              <th style={{ width: '22%' }}>TIPO DE ACCESORIO</th>
+                              <th style={{ width: '18%' }}>COD. ACTIVO</th>
+                              <th style={{ width: '20%' }}>MARCA</th>
+                              <th style={{ width: '20%' }}>MODELO</th>
+                              <th style={{ width: '20%' }}>SERIAL / CODIGO</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {accList.map((acc, idx) => (
+                              <tr key={idx}>
+                                <td><strong>{acc.tipo || 'Accesorio'}</strong></td>
+                                <td>{acc.codigoActivo || '-'}</td>
+                                <td>{acc.marca || '-'}</td>
+                                <td>{acc.modelo || '-'}</td>
+                                <td>{acc.serial || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      );
+                    })()}
 
                     {/* 5. REGISTRO DE MANTENIMIENTOS */}
                     <div className="hoja-section-title">REGISTRO DE MANTENIMIENTOS</div>
@@ -2473,19 +2642,29 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                     <table className="acta-table acta-table-grid">
                       <thead>
                         <tr>
-                          <th style={{ width: '60%' }}>Descripcion</th>
+                          <th style={{ width: '58%' }}>Descripcion</th>
                           <th style={{ width: '12%', textAlign: 'center' }}>Cantidad</th>
-                          <th style={{ width: '14%', textAlign: 'right' }}>Valor unitario</th>
-                          <th style={{ width: '14%', textAlign: 'right' }}>Valor total</th>
+                          <th style={{ width: '15%', textAlign: 'right' }}>Valor unitario</th>
+                          <th style={{ width: '15%', textAlign: 'right' }}>Valor total</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td>{eq.marca} {eq.modelo} - Serial: {eq.serial || eq.imei1 || eq.noInventario}</td>
+                          <td><strong>{eq.tipoEquipo}:</strong> {eq.marca} {eq.modelo} - Serial: {eq.serial || eq.imei1 || eq.noInventario}</td>
                           <td style={{ textAlign: 'center' }}>1</td>
                           <td style={{ textAlign: 'right' }}>$ {actaData.valorEstimado}</td>
                           <td style={{ textAlign: 'right' }}><strong>$ {actaData.valorEstimado}</strong></td>
                         </tr>
+                        {getEquipmentAccessories(eq).map((acc, idx) => (
+                          <tr key={idx}>
+                            <td>
+                              <strong>Accesorio ({acc.tipo}):</strong> {acc.codigoActivo ? <span>Cód. Activo: <strong>{acc.codigoActivo}</strong> | </span> : ''}Marca: {acc.marca || 'N/A'} | Modelo: {acc.modelo || 'N/A'} | Serial: {acc.serial || 'N/A'}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>1</td>
+                            <td style={{ textAlign: 'right' }}>$ -</td>
+                            <td style={{ textAlign: 'right' }}>$ -</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
 
@@ -2611,22 +2790,37 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                         <p><strong>IMEI 1:</strong> {eq.imei1 || 'N/A'}</p>
                         <p><strong>IMEI 2:</strong> {eq.imei2 || 'N/A'}</p>
                         <p><strong>Correo:</strong> {eq.correo || 'N/A'}</p>
-                        <p><strong>Cargador:</strong> {eq.cargadorMarca || 'N/A'}</p>
+                        <p><strong>App Lock:</strong> {eq.appLock || 'N/A'}</p>
                       </div>
                     </div>
                   )}
 
-                  {!phone && (
-                    <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
-                      <h5 style={{ fontWeight: 600, marginBottom: '0.4rem', color: 'var(--primary-light)' }}>Accesorios</h5>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem' }}>
-                        <p><strong>Teclado:</strong> {eq.teclado || 'N/A'}</p>
-                        <p><strong>Mouse:</strong> {eq.mouse || 'N/A'}</p>
-                        <p><strong>Impresora:</strong> {eq.impresora || 'N/A'}</p>
-                        <p><strong>Otros:</strong> {eq.otros || 'N/A'}</p>
+                  {/* Accesorios Dinámicos */}
+                  <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
+                    <h5 style={{ fontWeight: 600, marginBottom: '0.4rem', color: 'var(--primary-light)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      <Layers size={15} /> Accesorios y Periféricos ({getEquipmentAccessories(eq).length})
+                    </h5>
+                    {getEquipmentAccessories(eq).length === 0 ? (
+                      <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>Sin accesorios registrados.</p>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem' }}>
+                        {getEquipmentAccessories(eq).map((acc, idx) => (
+                          <div key={idx} style={{ padding: '0.4rem 0.6rem', background: 'var(--glass-bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--glass-border-subtle)' }}>
+                            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between' }}>
+                              <span>{acc.tipo}</span>
+                              {acc.codigoActivo && <span style={{ fontSize: '0.72rem', color: 'var(--primary-light)', fontWeight: 600 }}>Cód: {acc.codigoActivo}</span>}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              Marca: <strong>{acc.marca || 'N/A'}</strong> | Mod: <strong>{acc.modelo || 'N/A'}</strong>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                              Serial: <strong>{acc.serial || 'N/A'}</strong>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Historial Completo de Mantenimientos Realizados */}
                   <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>

@@ -140,6 +140,11 @@ export class InventarioService {
         equipo.responsableAnterior = responsableAnterior ? String(responsableAnterior).trim() : undefined;
         equipo.valorEstimado = valorEstimado ? String(valorEstimado).trim() : undefined;
 
+        // Accesorios dinámicos
+        if (body.accesorios !== undefined) {
+          equipo.accesorios = Array.isArray(body.accesorios) ? body.accesorios : [];
+        }
+
         const saved = await manager.save(Inventario, equipo);
 
         return new HttpException({
@@ -256,6 +261,11 @@ export class InventarioService {
         if (quienEntrega !== undefined) equipo.quienEntrega = quienEntrega ? String(quienEntrega).trim() : undefined;
         if (responsableAnterior !== undefined) equipo.responsableAnterior = responsableAnterior ? String(responsableAnterior).trim() : undefined;
         if (valorEstimado !== undefined) equipo.valorEstimado = valorEstimado ? String(valorEstimado).trim() : undefined;
+
+        // Accesorios dinámicos
+        if (body.accesorios !== undefined) {
+          equipo.accesorios = Array.isArray(body.accesorios) ? body.accesorios : [];
+        }
 
         const updated = await manager.save(Inventario, equipo);
 

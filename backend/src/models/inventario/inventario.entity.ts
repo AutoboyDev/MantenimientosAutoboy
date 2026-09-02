@@ -123,6 +123,10 @@ export class Inventario {
   @Column({ type: 'varchar', length: 50, name: 'valor_estimado', nullable: true })
   public valorEstimado?: string;
 
+  // Accesorios dinámicos (tipo, codigoActivo, marca, modelo, serial)
+  @Column({ type: 'jsonb', name: 'accesorios', nullable: true, default: () => "'[]'" })
+  public accesorios?: Array<{ tipo: string; codigoActivo?: string; marca: string; modelo: string; serial: string; }>;
+
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'created_at' })
   public createdAt!: Date;
 
