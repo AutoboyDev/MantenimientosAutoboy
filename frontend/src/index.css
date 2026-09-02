@@ -460,6 +460,620 @@ tr:hover td {
   }
 }
 
+/* Filtro de Categorías en Inventario */
+.category-pills {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--glass-bg-subtle);
+  padding: 0.35rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border-subtle);
+  width: fit-content;
+}
+
+.category-pill {
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.category-pill:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.category-pill.active {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+/* ==========================================
+   ESTILOS DE HOJA DE VIDA (AUT-FOR-231)
+   ========================================== */
+
+.hoja-vida-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hoja-vida-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--glass-border-subtle);
+}
+
+.hoja-vida-doc {
+  background: #ffffff;
+  color: #1e293b;
+  padding: 2rem;
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.hoja-header {
+  display: grid;
+  grid-template-columns: 140px 1fr 120px;
+  align-items: center;
+  border: 2px solid #2563eb;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.hoja-logo {
+  font-weight: 900;
+  font-size: 1.3rem;
+  letter-spacing: -0.05em;
+  color: #1e40af;
+  font-style: italic;
+}
+
+.hoja-title-box {
+  text-align: center;
+}
+
+.hoja-title-box h3 {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  margin: 0;
+  letter-spacing: 0.03em;
+}
+
+.hoja-title-box h4 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #3b82f6;
+  margin: 0.2rem 0;
+}
+
+.hoja-code {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.hoja-badge-box {
+  text-align: right;
+}
+
+.hoja-status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.hoja-section-title {
+  background: #2563eb;
+  color: #ffffff;
+  padding: 0.35rem 0.65rem;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
+
+.hoja-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.hoja-table th,
+.hoja-table td {
+  border: 1px solid #cbd5e1;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.hoja-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: #334155;
+  width: 25%;
+}
+
+.hoja-table td {
+  color: #0f172a;
+}
+
+.hoja-table-grid th {
+  background: #1e40af;
+  color: #ffffff;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.hoja-table-grid td {
+  text-align: center;
+  font-size: 0.75rem;
+}
+
+.hoja-footer {
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #cbd5e1;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+/* ==========================================
+   FORMATO INSTITUCIONAL ACTA DE ENTREGA (AUT-FOR-15)
+   ========================================== */
+
+.acta-entrega-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.acta-entrega-doc {
+  background: #ffffff;
+  color: #0f172a;
+  padding: 1.5rem 1.8rem;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  font-family: Arial, sans-serif;
+  line-height: 1.35;
+}
+
+.acta-header-banner {
+  background: #2563eb;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 1.25rem;
+  margin-bottom: 1rem;
+  border-radius: 2px;
+}
+
+.acta-logo-text {
+  font-size: 1.6rem;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: -0.03em;
+}
+
+.acta-title-text {
+  text-align: right;
+}
+
+.acta-title-text h3 {
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.acta-title-text div {
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+  opacity: 0.95;
+}
+
+.acta-declaracion {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #1e293b;
+  margin-bottom: 0.85rem;
+  text-align: justify;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 2px;
+}
+
+.acta-section-title {
+  background: #2563eb;
+  color: #ffffff;
+  padding: 0.35rem 0.65rem;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+  text-transform: uppercase;
+}
+
+.acta-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.acta-table th,
+.acta-table td {
+  border: 1px solid #cbd5e1;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.acta-table th {
+  background: #f1f5f9;
+  font-weight: 700;
+  color: #334155;
+  width: 25%;
+}
+
+.acta-table td {
+  color: #0f172a;
+}
+
+.acta-table-grid th {
+  background: #f1f5f9;
+  color: #1e293b;
+  font-size: 0.75rem;
+  text-align: left;
+  font-weight: 700;
+}
+
+.acta-table-grid td {
+  font-size: 0.75rem;
+}
+
+.acta-firmas-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #cbd5e1;
+  border-top: none;
+  margin-bottom: 0.5rem;
+}
+
+.acta-firma-col {
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+}
+
+.acta-firma-col:first-child {
+  border-right: 1px solid #cbd5e1;
+}
+
+.acta-firma-title {
+  font-weight: 700;
+  margin-bottom: 2.5rem;
+  color: #1e293b;
+}
+
+.acta-footer {
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #cbd5e1;
+  text-align: center;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+/* Modal Selector de Documentos */
+.doc-selector-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.doc-choice-card {
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: var(--nm-bg);
+  box-shadow: var(--nm-shadow-out);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--glass-border-subtle);
+  text-align: left;
+}
+
+.doc-choice-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--nm-shadow-pressed);
+}
+
+/* ==========================================
+   REGLAS DE IMPRESIÓN (PRINT / PDF)
+   ========================================== */
+
+@media print {
+  /* Ocultar elementos de UI interactiva */
+  .no-print,
+  nav,
+  .nm-nav,
+  .admin-header,
+  .admin-sidebar,
+  .admin-main,
+  .nm-toast-container,
+  button,
+  .featured-badge {
+    display: none !important;
+  }
+
+  /* Reset estructural para que el documento fluya sin límites de alto ni scrolls */
+  html, body, #root, .admin-container {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  .modal-hoja-vida-overlay {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .modal-hoja-vida-card {
+    position: static !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .hoja-vida-wrapper {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .hoja-vida-doc {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 8.5pt !important;
+    overflow: visible !important;
+  }
+
+  .hoja-header {
+    border: 2px solid #2563eb !important;
+    padding: 6px 10px !important;
+    margin-bottom: 8px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .hoja-section-title {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    font-size: 8pt !important;
+    padding: 4px 6px !important;
+    margin-top: 8px !important;
+    margin-bottom: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .hoja-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 6px !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .hoja-table th,
+  .hoja-table td {
+    border: 1px solid #94a3b8 !important;
+    padding: 3px 6px !important;
+    font-size: 8pt !important;
+    color: #0f172a !important;
+  }
+
+  .hoja-table th {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .hoja-table-grid th {
+    background: #1e40af !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .hoja-status-badge {
+    background: #16a34a !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .hoja-footer {
+    margin-top: 12px !important;
+    padding-top: 6px !important;
+    border-top: 1px solid #cbd5e1 !important;
+    font-size: 7pt !important;
+  }
+
+  /* ACTA DE ENTREGA EN IMPRESIÓN */
+  .acta-entrega-wrapper {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .acta-entrega-doc {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 8.5pt !important;
+    overflow: visible !important;
+  }
+
+  .acta-header-banner {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 6px 10px !important;
+    margin-bottom: 8px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .acta-declaracion {
+    font-size: 7.5pt !important;
+    line-height: 1.35 !important;
+    color: #0f172a !important;
+    margin-bottom: 8px !important;
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 8px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .acta-section-title {
+    background: #2563eb !important;
+    color: #ffffff !important;
+    font-size: 8pt !important;
+    padding: 4px 6px !important;
+    margin-top: 8px !important;
+    margin-bottom: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .acta-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 6px !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .acta-table th,
+  .acta-table td {
+    border: 1px solid #94a3b8 !important;
+    padding: 3px 6px !important;
+    font-size: 8pt !important;
+    color: #0f172a !important;
+  }
+
+  .acta-table th {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .acta-firmas-container {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    border: 1px solid #94a3b8 !important;
+    border-top: none !important;
+    margin-bottom: 6px !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .acta-firma-col {
+    padding: 6px 10px !important;
+    font-size: 7.5pt !important;
+  }
+
+  .acta-firma-title {
+    font-weight: 700 !important;
+    margin-bottom: 30px !important;
+  }
+
+  .acta-footer {
+    margin-top: 10px !important;
+    padding-top: 4px !important;
+    border-top: 1px solid #cbd5e1 !important;
+    font-size: 7pt !important;
+    text-align: center !important;
+  }
+
+  @page {
+    size: letter portrait;
+    margin: 8mm;
+  }
+}
+
 @media (max-width: 600px) {
   .nm-nav {
     margin: 0.5rem 0.5rem 0 0.5rem;

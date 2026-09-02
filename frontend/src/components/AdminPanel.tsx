@@ -25,7 +25,13 @@ import {
   CheckCircle2,
   Filter,
   Search,
-  History
+  History,
+  Smartphone,
+  Printer,
+  FileText,
+  FileSignature,
+  ArrowLeft,
+  Layers
 } from 'lucide-react';
 
 export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
@@ -40,7 +46,7 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
   const [scheduleSearch, setScheduleSearch] = useState<string>('');
   const [scheduleYear, setScheduleYear] = useState<number>(new Date().getFullYear());
 
-  // Listas de datos
+  // Datos Principales
   const [agencies, setAgencies] = useState<any[]>([]);
   const [equipments, setEquipments] = useState<any[]>([]);
   const [maintenances, setMaintenances] = useState<any[]>([]);
@@ -53,15 +59,36 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
 
   // Control de Modales
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<'AGENCY' | 'EQUIPMENT' | 'MAINTENANCE' | 'USER' | 'AUDIT_DETAIL' | 'EQUIPMENT_DETAIL' | null>(null);
+  const [modalType, setModalType] = useState<'AGENCY' | 'EQUIPMENT' | 'MAINTENANCE' | 'USER' | 'AUDIT_DETAIL' | 'EQUIPMENT_DETAIL' | 'DOC_SELECT' | 'HOJA_DE_VIDA' | 'ACTA_DE_ENTREGA' | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [selectedAuditLog, setSelectedAuditLog] = useState<any>(null);
   const [selectedEquipmentDetail, setSelectedEquipmentDetail] = useState<any>(null);
+  const [selectedEquipmentForHoja, setSelectedEquipmentForHoja] = useState<any>(null);
+
+  // Datos para Acta de Entrega
+  const [actaData, setActaData] = useState({
+    cedulaUsuario: '',
+    quienEntrega: 'YEIMMY VIVIANA CAICEDO MUÑOZ',
+    cargoQuienEntrega: 'Administrador de Sistemas',
+    responsableAnterior: '',
+    valorEstimado: '4.000.000',
+    fechaActa: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+  });
+
+  // Filtro de Categoría en Inventario
+  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState<'ALL' | 'PC' | 'PHONE'>('ALL');
+  const [equipCategory, setEquipCategory] = useState<'PC' | 'PHONE'>('PC');
+
+  // Helper para detectar si un equipo es teléfono
+  const isPhone = (eq: any) => {
+    const t = String(eq?.tipoEquipo || '').toLowerCase();
+    return t.includes('celular') || t.includes('teléfono') || t.includes('telefono') || t.includes('móvil') || t.includes('movil') || t.includes('smartphone') || !!eq?.imei1 || !!eq?.numeroLinea;
+  };
 
   // Form Data de Agencias
   const [agencyForm, setAgencyForm] = useState({ nombre: '' });
 
-  // Form Data de Equipos
+  // Form Data de Equipos (Computador + Telefonía + Vida Útil)
   const [equipForm, setEquipForm] = useState({
     idAgencia: '',
     noInventario: '',
@@ -69,6 +96,12 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
     marca: '',
     referencia: '',
     modelo: '',
+    vidaUtil: '3 años',
+    fechaCompra: '',
+    ubicacion: '',
+    reubicacion: 'N/A',
+    estado: 'Activo',
+    // Hardware PC
     procesador: '',
     discoDuro: '',
     memoriaRam: '',
@@ -80,7 +113,19 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
     mouse: '',
     teclado: '',
     impresora: '',
-    otros: ''
+    otros: '',
+    // Telefonía Celular
+    imei1: '',
+    imei2: '',
+    numeroLinea: '',
+    imeiSimcard: '',
+    correo: '',
+    claveCorreo: '',
+    appLock: 'N/A',
+    cargadorMarca: '',
+    cargadorSerial: '',
+    cargadorFechaCompra: '',
+    observaciones: ''
   });
 
   // Form Data de Mantenimientos
@@ -117,10 +162,16 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
     setActionError(null);
     try {
       if (activeTab === 'INVENTORY') {
-        const eqData = await api.get('/inventory/findAll');
+        const [eqData, agData, mData, auData] = await Promise.all([
+          api.get('/inventory/findAll'),
+          api.get('/agency/findAll'),
+          api.get('/maintenance/findAll'),
+          api.get('/audit/findAll').catch(() => [])
+        ]);
         setEquipments(eqData);
-        const agData = await api.get('/agency/findAll');
         setAgencies(agData);
+        setMaintenances(mData);
+        setAuditLogs(auData || []);
       } else if (activeTab === 'MAINTENANCE') {
         const mData = await api.get('/maintenance/findAll');
         setMaintenances(mData);
@@ -279,7 +330,7 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
   return (
     <div className="app-wrapper">
       {/* Navbar de Administración */}
-      <nav className="nm-nav">
+      <nav className="nm-nav no-print">
         <div className="nm-nav-logo heading-font">
           <Wrench className="gear-spin" size={24} />
           Autoboy <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>Admin</span>
@@ -310,7 +361,7 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
             onClick={() => setActiveTab('SCHEDULE')}
           >
             <CalendarClock size={20} />
-            <span>Cronograma (6M)</span>
+            <span>Cronograma</span>
             <span className="featured-badge">Principal</span>
           </button>
 
@@ -344,100 +395,294 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
         {/* Content Area */}
         <main className="admin-main">
           {/* INVENTARIO TAB */}
-          {activeTab === 'INVENTORY' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                  <h2 className="heading-font" style={{ fontSize: '1.5rem' }}>Inventario de Equipos</h2>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Listado y control de recursos tecnológicos registrados</p>
-                </div>
-                <button className="nm-btn nm-btn-primary" onClick={() => {
-                  setEditId(null);
-                  setEquipForm({
-                    idAgencia: agencies[0]?.id || '',
-                    noInventario: '',
-                    tipoEquipo: 'Computador',
-                    marca: '',
-                    referencia: '',
-                    modelo: '',
-                    procesador: '',
-                    discoDuro: '',
-                    memoriaRam: '',
-                    uniDvd: 'N/A',
-                    serial: '',
-                    areaSucursal: '',
-                    cargo: '',
-                    usuarioSucursal: '',
-                    mouse: '',
-                    teclado: '',
-                    impresora: '',
-                    otros: ''
-                  });
-                  setModalType('EQUIPMENT');
-                  setModalOpen(true);
-                }}>
-                  <Plus size={16} /> Agregar Equipo
-                </button>
-              </div>
+          {activeTab === 'INVENTORY' && (() => {
+            const filteredEquips = equipments.filter(eq => {
+              if (inventoryCategoryFilter === 'PC') return !isPhone(eq);
+              if (inventoryCategoryFilter === 'PHONE') return isPhone(eq);
+              return true;
+            });
 
-              {loading ? <p>Cargando inventario...</p> : (
-                <div className="nm-table-container">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>N° Inventario</th>
-                        <th>Tipo / Marca</th>
-                        <th>Modelo / Ref.</th>
-                        <th>Agencia / Sucursal</th>
-                        <th>Usuario</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {equipments.map(eq => (
-                        <tr key={eq.id}>
-                          <td><strong>{eq.noInventario}</strong></td>
-                          <td>{eq.tipoEquipo} ({eq.marca})</td>
-                          <td>{eq.modelo} - {eq.referencia}</td>
-                          <td>{eq.agencia?.nombre || 'N/A'}</td>
-                          <td>{eq.usuarioSucursal || 'N/A'}</td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button className="nm-btn" style={{ padding: '0.4rem' }} title="Ver más detalles" onClick={() => {
-                                setSelectedEquipmentDetail(eq);
-                                setModalType('EQUIPMENT_DETAIL');
-                                setModalOpen(true);
-                              }}>
-                                <Eye size={14} />
-                              </button>
-                              <button className="nm-btn" style={{ padding: '0.4rem' }} onClick={() => {
-                                setEditId(eq.id);
-                                setEquipForm({ ...eq });
-                                setModalType('EQUIPMENT');
-                                setModalOpen(true);
-                              }}>
-                                <Edit2 size={14} />
-                              </button>
-                              {user?.rol === 'super_admin' && (
-                                <button className="nm-btn nm-btn-danger" style={{ padding: '0.4rem' }} onClick={() => handleEquipDelete(eq.id)}>
-                                  <Trash2 size={14} style={{ color: 'var(--error)' }} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {equipments.length === 0 && (
-                        <tr>
-                          <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay equipos registrados.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+            return (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <h2 className="heading-font" style={{ fontSize: '1.5rem' }}>Inventario de Recursos Tecnológicos</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Control de computadores, portátiles y teléfonos celulares registrados</p>
+                  </div>
+                  <button className="nm-btn nm-btn-primary" onClick={() => {
+                    setEditId(null);
+                    setEquipCategory('PC');
+                    setEquipForm({
+                      idAgencia: agencies[0]?.id || '',
+                      noInventario: '',
+                      tipoEquipo: 'Computador',
+                      marca: '',
+                      referencia: '',
+                      modelo: '',
+                      vidaUtil: '3 años',
+                      fechaCompra: '',
+                      ubicacion: '',
+                      reubicacion: 'N/A',
+                      estado: 'Activo',
+                      procesador: '',
+                      discoDuro: '',
+                      memoriaRam: '',
+                      uniDvd: 'N/A',
+                      serial: '',
+                      areaSucursal: '',
+                      cargo: '',
+                      usuarioSucursal: '',
+                      mouse: '',
+                      teclado: '',
+                      impresora: '',
+                      otros: '',
+                      imei1: '',
+                      imei2: '',
+                      numeroLinea: '',
+                      imeiSimcard: '',
+                      correo: '',
+                      claveCorreo: '',
+                      appLock: 'N/A',
+                      cargadorMarca: '',
+                      cargadorSerial: '',
+                      cargadorFechaCompra: '',
+                      observaciones: ''
+                    });
+                    setModalType('EQUIPMENT');
+                    setModalOpen(true);
+                  }}>
+                    <Plus size={16} /> Agregar Equipo
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
+
+                {/* Filtro Inteligente de Categorías */}
+                <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div className="category-pills">
+                    <button
+                      className={`category-pill ${inventoryCategoryFilter === 'ALL' ? 'active' : ''}`}
+                      onClick={() => setInventoryCategoryFilter('ALL')}
+                    >
+                      <Layers size={14} /> Todos ({equipments.length})
+                    </button>
+                    <button
+                      className={`category-pill ${inventoryCategoryFilter === 'PC' ? 'active' : ''}`}
+                      onClick={() => setInventoryCategoryFilter('PC')}
+                    >
+                      <Laptop size={14} /> Computadores ({equipments.filter(e => !isPhone(e)).length})
+                    </button>
+                    <button
+                      className={`category-pill ${inventoryCategoryFilter === 'PHONE' ? 'active' : ''}`}
+                      onClick={() => setInventoryCategoryFilter('PHONE')}
+                    >
+                      <Smartphone size={14} /> Teléfonos ({equipments.filter(e => isPhone(e)).length})
+                    </button>
+                  </div>
+                </div>
+
+                {loading ? <p>Cargando inventario...</p> : (
+                  <div className="nm-table-container">
+                    <table>
+                      <thead>
+                        {inventoryCategoryFilter === 'PHONE' ? (
+                          <tr>
+                            <th>N° Inv</th>
+                            <th>Sede / Agencia</th>
+                            <th>Marca / Modelo</th>
+                            <th>N° Línea</th>
+                            <th>IMEI 1</th>
+                            <th>Correo Asignado</th>
+                            <th>Responsable</th>
+                            <th>Vida Útil</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                          </tr>
+                        ) : inventoryCategoryFilter === 'PC' ? (
+                          <tr>
+                            <th>N° Inv</th>
+                            <th>Sede / Agencia</th>
+                            <th>Tipo</th>
+                            <th>Marca / Modelo</th>
+                            <th>Procesador / RAM</th>
+                            <th>Disco Duro</th>
+                            <th>Responsable</th>
+                            <th>Vida Útil</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                          </tr>
+                        ) : (
+                          <tr>
+                            <th>N° Inv</th>
+                            <th>Sede / Agencia</th>
+                            <th>Tipo</th>
+                            <th>Marca / Modelo</th>
+                            <th>Serial / IMEI</th>
+                            <th>Responsable</th>
+                            <th>Vida Útil</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                          </tr>
+                        )}
+                      </thead>
+                      <tbody>
+                        {filteredEquips.map(eq => {
+                          const phone = isPhone(eq);
+                          return (
+                            <tr key={eq.id}>
+                              <td><strong>{eq.noInventario}</strong></td>
+                              <td>{eq.agencia?.nombre || 'N/A'}</td>
+                              
+                              {inventoryCategoryFilter === 'PHONE' ? (
+                                <>
+                                  <td><strong>{eq.marca}</strong> {eq.modelo}</td>
+                                  <td>{eq.numeroLinea ? <strong>{eq.numeroLinea}</strong> : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
+                                  <td style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{eq.imei1 || '-'}</td>
+                                  <td style={{ fontSize: '0.8rem' }}>{eq.correo || '-'}</td>
+                                </>
+                              ) : inventoryCategoryFilter === 'PC' ? (
+                                <>
+                                  <td>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                      <Laptop size={13} style={{ color: 'var(--primary-light)' }} />
+                                      {eq.tipoEquipo}
+                                    </span>
+                                  </td>
+                                  <td><strong>{eq.marca}</strong> {eq.modelo}</td>
+                                  <td style={{ fontSize: '0.8rem' }}>{eq.procesador || '-'} / {eq.memoriaRam || '-'}</td>
+                                  <td style={{ fontSize: '0.8rem' }}>{eq.discoDuro || '-'}</td>
+                                </>
+                              ) : (
+                                <>
+                                  <td>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                      {phone ? <Smartphone size={13} style={{ color: '#10b981' }} /> : <Laptop size={13} style={{ color: 'var(--primary-light)' }} />}
+                                      {eq.tipoEquipo}
+                                    </span>
+                                  </td>
+                                  <td><strong>{eq.marca}</strong> {eq.modelo}</td>
+                                  <td style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{phone ? (eq.imei1 || eq.numeroLinea || '-') : (eq.serial || '-')}</td>
+                                </>
+                              )}
+
+                              <td>{eq.usuarioSucursal || 'Sin asignar'}</td>
+                              <td><span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{eq.vidaUtil || '3 años'}</span></td>
+                              <td>
+                                <span style={{
+                                  padding: '0.2rem 0.5rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  backgroundColor: eq.estado === 'Inactivo' || eq.estado === 'Dado de baja' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                  color: eq.estado === 'Inactivo' || eq.estado === 'Dado de baja' ? 'var(--error)' : 'var(--success)'
+                                }}>
+                                  {eq.estado || 'Activo'}
+                                </span>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '0.35rem' }}>
+                                  <button
+                                    className="nm-btn"
+                                    style={{ padding: '0.4rem', color: '#3b82f6' }}
+                                    title="Generar Documentos Oficiales (Hoja de Vida / Acta de Entrega)"
+                                    onClick={() => {
+                                      setSelectedEquipmentForHoja(eq);
+                                      setSelectedEquipmentDetail(eq);
+                                      setActaData({
+                                        cedulaUsuario: eq.cedulaUsuario || '',
+                                        quienEntrega: eq.quienEntrega || user?.username || 'YEIMMY VIVIANA CAICEDO MUÑOZ',
+                                        cargoQuienEntrega: 'Administrador de Sistemas',
+                                        responsableAnterior: eq.responsableAnterior || eq.usuarioSucursal || '',
+                                        valorEstimado: eq.valorEstimado || '4.000.000',
+                                        fechaActa: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+                                      });
+                                      setModalType('DOC_SELECT');
+                                      setModalOpen(true);
+                                    }}
+                                  >
+                                    <FileText size={14} />
+                                  </button>
+                                  <button
+                                    className="nm-btn"
+                                    style={{ padding: '0.4rem' }}
+                                    title="Ver detalles técnicos"
+                                    onClick={() => {
+                                      setSelectedEquipmentDetail(eq);
+                                      setModalType('EQUIPMENT_DETAIL');
+                                      setModalOpen(true);
+                                    }}
+                                  >
+                                    <Eye size={14} />
+                                  </button>
+                                  <button
+                                    className="nm-btn"
+                                    style={{ padding: '0.4rem' }}
+                                    title="Editar"
+                                    onClick={() => {
+                                      setEditId(eq.id);
+                                      setEquipCategory(isPhone(eq) ? 'PHONE' : 'PC');
+                                      setEquipForm({
+                                        idAgencia: eq.idAgencia || agencies[0]?.id || '',
+                                        noInventario: eq.noInventario || '',
+                                        tipoEquipo: eq.tipoEquipo || 'Computador',
+                                        marca: eq.marca || '',
+                                        referencia: eq.referencia || '',
+                                        modelo: eq.modelo || '',
+                                        vidaUtil: eq.vidaUtil || '3 años',
+                                        fechaCompra: eq.fechaCompra || '',
+                                        ubicacion: eq.ubicacion || '',
+                                        reubicacion: eq.reubicacion || 'N/A',
+                                        estado: eq.estado || 'Activo',
+                                        procesador: eq.procesador || '',
+                                        discoDuro: eq.discoDuro || '',
+                                        memoriaRam: eq.memoriaRam || '',
+                                        uniDvd: eq.uniDvd || 'N/A',
+                                        serial: eq.serial || '',
+                                        areaSucursal: eq.areaSucursal || '',
+                                        cargo: eq.cargo || '',
+                                        usuarioSucursal: eq.usuarioSucursal || '',
+                                        mouse: eq.mouse || '',
+                                        teclado: eq.teclado || '',
+                                        impresora: eq.impresora || '',
+                                        otros: eq.otros || '',
+                                        imei1: eq.imei1 || '',
+                                        imei2: eq.imei2 || '',
+                                        numeroLinea: eq.numeroLinea || '',
+                                        imeiSimcard: eq.imeiSimcard || '',
+                                        correo: eq.correo || '',
+                                        claveCorreo: eq.claveCorreo || '',
+                                        appLock: eq.appLock || 'N/A',
+                                        cargadorMarca: eq.cargadorMarca || '',
+                                        cargadorSerial: eq.cargadorSerial || '',
+                                        cargadorFechaCompra: eq.cargadorFechaCompra || '',
+                                        observaciones: eq.observaciones || ''
+                                      });
+                                      setModalType('EQUIPMENT');
+                                      setModalOpen(true);
+                                    }}
+                                  >
+                                    <Edit2 size={14} />
+                                  </button>
+                                  {user?.rol === 'super_admin' && (
+                                    <button className="nm-btn nm-btn-danger" style={{ padding: '0.4rem' }} onClick={() => handleEquipDelete(eq.id)}>
+                                      <Trash2 size={14} style={{ color: 'var(--error)' }} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {filteredEquips.length === 0 && (
+                          <tr>
+                            <td colSpan={10} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay equipos registrados en esta categoría.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* MANTENIMIENTO TAB */}
           {activeTab === 'MAINTENANCE' && (
@@ -1250,7 +1495,7 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
          MODALES NEUMÓRFICOS DE CREACIÓN/EDICIÓN
          ========================================== */}
       {modalOpen && (
-        <div style={{
+        <div className={`nm-modal-backdrop ${modalType === 'HOJA_DE_VIDA' || modalType === 'ACTA_DE_ENTREGA' ? 'modal-hoja-vida-overlay' : ''}`} style={{
           position: 'fixed',
           inset: 0,
           backgroundColor: 'rgba(0,0,0,0.4)',
@@ -1261,11 +1506,11 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
           zIndex: 100,
           padding: '1.5rem'
         }}>
-          <div className="nm-card" style={{ width: '100%', maxWidth: modalType === 'EQUIPMENT' ? '700px' : '480px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(0,0,0,0.02)', paddingBottom: '0.75rem', marginBottom: '1.5rem' }}>
+          <div className={`nm-card ${modalType === 'HOJA_DE_VIDA' || modalType === 'ACTA_DE_ENTREGA' ? 'modal-hoja-vida-card' : ''}`} style={{ width: '100%', maxWidth: modalType === 'HOJA_DE_VIDA' || modalType === 'ACTA_DE_ENTREGA' ? '920px' : modalType === 'DOC_SELECT' ? '680px' : modalType === 'EQUIPMENT' ? '760px' : '520px', maxHeight: '90vh', overflowY: 'auto', padding: modalType === 'HOJA_DE_VIDA' || modalType === 'ACTA_DE_ENTREGA' ? '1.5rem' : '2rem' }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(0,0,0,0.02)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
               <h3 className="heading-font" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <FileCode size={20} style={{ color: 'var(--primary-light)' }} />
-                {editId ? 'Editar Registro' : 'Nuevo Registro'}
+                {modalType === 'HOJA_DE_VIDA' ? <FileText size={20} style={{ color: '#3b82f6' }} /> : modalType === 'ACTA_DE_ENTREGA' ? <FileSignature size={20} style={{ color: '#10b981' }} /> : modalType === 'DOC_SELECT' ? <FileText size={20} style={{ color: 'var(--primary-light)' }} /> : <FileCode size={20} style={{ color: 'var(--primary-light)' }} />}
+                {modalType === 'HOJA_DE_VIDA' ? 'Hoja de Vida de Equipo Tecnológico (AUT-FOR-231)' : modalType === 'ACTA_DE_ENTREGA' ? 'Acta de Entrega y Recibo de Equipos (AUT-FOR-15)' : modalType === 'DOC_SELECT' ? 'Documentos Oficiales del Equipo' : editId ? 'Editar Registro' : 'Nuevo Registro'}
               </h3>
               <button className="nm-btn" style={{ padding: '0.4rem', borderRadius: '50%' }} onClick={() => setModalOpen(false)}>
                 <X size={16} />
@@ -1275,6 +1520,68 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
             {actionError && (
               <div className="nm-card-sunken" style={{ padding: '0.75rem 1rem', color: 'var(--error)', fontSize: '0.85rem', marginBottom: '1rem', borderRadius: 'var(--radius-sm)' }}>
                 {actionError}
+              </div>
+            )}
+
+            {/* SELECTOR DE DOCUMENTOS */}
+            {modalType === 'DOC_SELECT' && selectedEquipmentForHoja && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className="nm-card-sunken" style={{ padding: '0.85rem 1rem', fontSize: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div>
+                    <strong>Equipo:</strong> {selectedEquipmentForHoja.tipoEquipo} ({selectedEquipmentForHoja.noInventario}) - {selectedEquipmentForHoja.marca} {selectedEquipmentForHoja.modelo}
+                  </div>
+                  <div style={{ color: 'var(--text-muted)' }}>
+                    <strong>Responsable:</strong> {selectedEquipmentForHoja.usuarioSucursal || 'Sin asignar'}
+                  </div>
+                </div>
+
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Selecciona el formato institucional que deseas generar, visualizar o imprimir para este equipo:
+                </p>
+
+                <div className="doc-selector-grid">
+                  <div
+                    className="doc-choice-card"
+                    onClick={() => setModalType('HOJA_DE_VIDA')}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <div style={{ padding: '0.6rem', borderRadius: 'var(--radius-sm)', background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' }}>
+                        <FileText size={24} />
+                      </div>
+                      <div>
+                        <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Hoja de Vida</h4>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#3b82f6' }}>AUT-FOR-231 | Versión 2</span>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                      Especificaciones técnicas, hardware, identificadores de red/telefonía, accesorios, historial de mantenimientos y bitácora de auditoría.
+                    </p>
+                    <button className="nm-btn nm-btn-primary" style={{ marginTop: 'auto', width: '100%', fontSize: '0.8rem', padding: '0.5rem' }}>
+                      <FileText size={14} /> Abrir Hoja de Vida
+                    </button>
+                  </div>
+
+                  <div
+                    className="doc-choice-card"
+                    onClick={() => setModalType('ACTA_DE_ENTREGA')}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                      <div style={{ padding: '0.6rem', borderRadius: 'var(--radius-sm)', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                        <FileSignature size={24} />
+                      </div>
+                      <div>
+                        <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Acta de Entrega</h4>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#10b981' }}>AUT-FOR-15</span>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                      Acta formal de entrega y recibo de equipos/herramientas, con declaración de responsabilidad del colaborador, detalle valorizado y firmas.
+                    </p>
+                    <button className="nm-btn nm-btn-primary" style={{ marginTop: 'auto', width: '100%', fontSize: '0.8rem', padding: '0.5rem', backgroundColor: '#10b981', borderColor: '#10b981' }}>
+                      <FileSignature size={14} /> Abrir Acta de Entrega
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1295,12 +1602,46 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
               </form>
             )}
 
-            {/* FORMULARIO EQUIPOS */}
+            {/* FORMULARIO EQUIPOS (COMPUTADOR / TELEFONO) */}
             {modalType === 'EQUIPMENT' && (
               <form onSubmit={handleEquipSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                {/* Selector de Categoría */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.5rem' }}>Tipo de Dispositivo a Registrar</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <button
+                      type="button"
+                      className={`nm-btn ${equipCategory === 'PC' ? 'nm-btn-primary' : ''}`}
+                      style={{ padding: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 700 }}
+                      onClick={() => {
+                        setEquipCategory('PC');
+                        if (equipForm.tipoEquipo === 'Celular' || equipForm.tipoEquipo === 'Smartphone') {
+                          setEquipForm({ ...equipForm, tipoEquipo: 'Computador' });
+                        }
+                      }}
+                    >
+                      <Laptop size={18} /> Computador / Portátil
+                    </button>
+                    <button
+                      type="button"
+                      className={`nm-btn ${equipCategory === 'PHONE' ? 'nm-btn-primary' : ''}`}
+                      style={{ padding: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: 700 }}
+                      onClick={() => {
+                        setEquipCategory('PHONE');
+                        if (equipForm.tipoEquipo === 'Computador' || equipForm.tipoEquipo === 'Todo en Uno') {
+                          setEquipForm({ ...equipForm, tipoEquipo: 'Celular' });
+                        }
+                      }}
+                    >
+                      <Smartphone size={18} /> Teléfono Celular
+                    </button>
+                  </div>
+                </div>
+
+                {/* Datos Generales Base */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Sede / Agencia</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Sede / Agencia *</label>
                     <select
                       className="nm-select"
                       value={equipForm.idAgencia}
@@ -1312,7 +1653,7 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>N° Inventario</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>N° Inventario *</label>
                     <input
                       type="text"
                       className="nm-input"
@@ -1323,45 +1664,46 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Tipo Equipo</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Tipo de Equipo *</label>
                     <input
                       type="text"
                       className="nm-input"
+                      placeholder={equipCategory === 'PHONE' ? 'Ej: Celular, Smartphone' : 'Ej: Computador, Portátil'}
                       value={equipForm.tipoEquipo}
                       onChange={(e) => setEquipForm({ ...equipForm, tipoEquipo: e.target.value })}
                       required
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Marca</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Marca *</label>
                     <input
                       type="text"
                       className="nm-input"
+                      placeholder={equipCategory === 'PHONE' ? 'Ej: SAMSUNG, Xiaomi, Apple' : 'Ej: HP, Lenovo, Dell'}
                       value={equipForm.marca}
                       onChange={(e) => setEquipForm({ ...equipForm, marca: e.target.value })}
                       required
                     />
                   </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Modelo</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Modelo *</label>
                     <input
                       type="text"
                       className="nm-input"
+                      placeholder={equipCategory === 'PHONE' ? 'Ej: Galaxy A32 (SM-A325M/DS)' : 'Ej: ProDesk 400 G6'}
                       value={equipForm.modelo}
                       onChange={(e) => setEquipForm({ ...equipForm, modelo: e.target.value })}
                       required
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Referencia</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Referencia *</label>
                     <input
                       type="text"
                       className="nm-input"
+                      placeholder="Referencia o N/A"
                       value={equipForm.referencia}
                       onChange={(e) => setEquipForm({ ...equipForm, referencia: e.target.value })}
                       required
@@ -1369,89 +1711,255 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                {/* Vida Útil, Fecha Compra, Ubicación, Estado */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Procesador</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Vida Útil</label>
                     <input
                       type="text"
                       className="nm-input"
-                      value={equipForm.procesador}
-                      onChange={(e) => setEquipForm({ ...equipForm, procesador: e.target.value })}
+                      placeholder="Ej: 3 años, 5 años"
+                      value={equipForm.vidaUtil}
+                      onChange={(e) => setEquipForm({ ...equipForm, vidaUtil: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Memoria RAM</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Fecha de Compra</label>
                     <input
-                      type="text"
+                      type="date"
                       className="nm-input"
-                      value={equipForm.memoriaRam}
-                      onChange={(e) => setEquipForm({ ...equipForm, memoriaRam: e.target.value })}
+                      value={equipForm.fechaCompra}
+                      onChange={(e) => setEquipForm({ ...equipForm, fechaCompra: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Disco Duro</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Estado</label>
+                    <select
+                      className="nm-select"
+                      value={equipForm.estado}
+                      onChange={(e) => setEquipForm({ ...equipForm, estado: e.target.value })}
+                    >
+                      <option value="Activo">🟢 Activo</option>
+                      <option value="En Mantenimiento">🟡 En Mantenimiento</option>
+                      <option value="Inactivo">⚪ Inactivo</option>
+                      <option value="Dado de baja">🔴 Dado de baja</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Ubicación</label>
                     <input
                       type="text"
                       className="nm-input"
-                      value={equipForm.discoDuro}
-                      onChange={(e) => setEquipForm({ ...equipForm, discoDuro: e.target.value })}
+                      placeholder="Ej: Gestión documental"
+                      value={equipForm.ubicacion}
+                      onChange={(e) => setEquipForm({ ...equipForm, ubicacion: e.target.value })}
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
+                {/* Asignación de Usuario */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Serial</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Responsable (Usuario)</label>
                     <input
                       type="text"
                       className="nm-input"
-                      value={equipForm.serial}
-                      onChange={(e) => setEquipForm({ ...equipForm, serial: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Usuario Asignado</label>
-                    <input
-                      type="text"
-                      className="nm-input"
+                      placeholder="Nombre del responsable"
                       value={equipForm.usuarioSucursal}
                       onChange={(e) => setEquipForm({ ...equipForm, usuarioSucursal: e.target.value })}
                     />
                   </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Área</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Área / Sucursal</label>
                     <input
                       type="text"
                       className="nm-input"
+                      placeholder="Ej: Administrativo Bogotá"
                       value={equipForm.areaSucursal}
                       onChange={(e) => setEquipForm({ ...equipForm, areaSucursal: e.target.value })}
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Cargo</label>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Cargo</label>
                     <input
                       type="text"
                       className="nm-input"
+                      placeholder="Cargo del usuario"
                       value={equipForm.cargo}
                       onChange={(e) => setEquipForm({ ...equipForm, cargo: e.target.value })}
                     />
                   </div>
                 </div>
 
-                <div className="nm-card-sunken" style={{ padding: '1rem' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Periféricos y Otros</span>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem', marginTop: '0.5rem' }}>
-                    <input type="text" placeholder="Teclado" className="nm-input" value={equipForm.teclado} onChange={(e) => setEquipForm({ ...equipForm, teclado: e.target.value })} />
-                    <input type="text" placeholder="Mouse" className="nm-input" value={equipForm.mouse} onChange={(e) => setEquipForm({ ...equipForm, mouse: e.target.value })} />
-                    <input type="text" placeholder="Impresora" className="nm-input" value={equipForm.impresora} onChange={(e) => setEquipForm({ ...equipForm, impresora: e.target.value })} />
-                    <input type="text" placeholder="Otros" className="nm-input" value={equipForm.otros} onChange={(e) => setEquipForm({ ...equipForm, otros: e.target.value })} />
-                  </div>
+                {/* SECCIÓN ESPECÍFICA: SI ES COMPUTADOR */}
+                {equipCategory === 'PC' && (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Procesador</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          placeholder="Ej: Intel Core i5 / AMD Ryzen 5"
+                          value={equipForm.procesador}
+                          onChange={(e) => setEquipForm({ ...equipForm, procesador: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Memoria RAM</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          placeholder="Ej: 8 GB / 16 GB"
+                          value={equipForm.memoriaRam}
+                          onChange={(e) => setEquipForm({ ...equipForm, memoriaRam: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Disco Duro / Almacenamiento</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          placeholder="Ej: 512 GB SSD / 1 TB HDD"
+                          value={equipForm.discoDuro}
+                          onChange={(e) => setEquipForm({ ...equipForm, discoDuro: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Serial</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          placeholder="Serial del equipo"
+                          value={equipForm.serial}
+                          onChange={(e) => setEquipForm({ ...equipForm, serial: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="nm-card-sunken" style={{ padding: '1rem' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Periféricos y Accesorios de PC</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginTop: '0.5rem' }}>
+                        <input type="text" placeholder="Teclado" className="nm-input" value={equipForm.teclado} onChange={(e) => setEquipForm({ ...equipForm, teclado: e.target.value })} />
+                        <input type="text" placeholder="Mouse" className="nm-input" value={equipForm.mouse} onChange={(e) => setEquipForm({ ...equipForm, mouse: e.target.value })} />
+                        <input type="text" placeholder="Impresora" className="nm-input" value={equipForm.impresora} onChange={(e) => setEquipForm({ ...equipForm, impresora: e.target.value })} />
+                        <input type="text" placeholder="Otros periféricos" className="nm-input" value={equipForm.otros} onChange={(e) => setEquipForm({ ...equipForm, otros: e.target.value })} />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* SECCIÓN ESPECÍFICA: SI ES TELÉFONO CELULAR */}
+                {equipCategory === 'PHONE' && (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Procesador</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          placeholder="Ej: Mediatek Helio G35 / Snapdragon"
+                          value={equipForm.procesador}
+                          onChange={(e) => setEquipForm({ ...equipForm, procesador: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Memoria RAM</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          placeholder="Ej: 4 GB"
+                          value={equipForm.memoriaRam}
+                          onChange={(e) => setEquipForm({ ...equipForm, memoriaRam: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Almacenamiento Interno</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          placeholder="Ej: 64 GB / 128 GB"
+                          value={equipForm.discoDuro}
+                          onChange={(e) => setEquipForm({ ...equipForm, discoDuro: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Serial</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          placeholder="Ej: RF8T204GLCZ"
+                          value={equipForm.serial}
+                          onChange={(e) => setEquipForm({ ...equipForm, serial: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="nm-card-sunken" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-light)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <Smartphone size={16} /> Identificadores y Línea Móvil
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>IMEI 1</label>
+                          <input type="text" placeholder="Ej: 350579459368766" className="nm-input" value={equipForm.imei1} onChange={(e) => setEquipForm({ ...equipForm, imei1: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>IMEI 2</label>
+                          <input type="text" placeholder="Ej: 350738169368769" className="nm-input" value={equipForm.imei2} onChange={(e) => setEquipForm({ ...equipForm, imei2: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Número de Línea</label>
+                          <input type="text" placeholder="Ej: 3124659304" className="nm-input" value={equipForm.numeroLinea} onChange={(e) => setEquipForm({ ...equipForm, numeroLinea: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>IMEI SimCard</label>
+                          <input type="text" placeholder="IMEI de SimCard" className="nm-input" value={equipForm.imeiSimcard} onChange={(e) => setEquipForm({ ...equipForm, imeiSimcard: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Correo Asignado</label>
+                          <input type="text" placeholder="Ej: gestiondoc.autoboysa@gmail.com" className="nm-input" value={equipForm.correo} onChange={(e) => setEquipForm({ ...equipForm, correo: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>App Lock / Seguridad</label>
+                          <input type="text" placeholder="N/A o código" className="nm-input" value={equipForm.appLock} onChange={(e) => setEquipForm({ ...equipForm, appLock: e.target.value })} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="nm-card-sunken" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>Accesorios del Teléfono (Cargador)</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Marca / Modelo Cargador</label>
+                          <input type="text" placeholder="Ej: JUQU / Original Samsung" className="nm-input" value={equipForm.cargadorMarca} onChange={(e) => setEquipForm({ ...equipForm, cargadorMarca: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Serial Cargador</label>
+                          <input type="text" placeholder="Serial o N/A" className="nm-input" value={equipForm.cargadorSerial} onChange={(e) => setEquipForm({ ...equipForm, cargadorSerial: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.3rem' }}>Fecha Compra Cargador</label>
+                          <input type="date" className="nm-input" value={equipForm.cargadorFechaCompra} onChange={(e) => setEquipForm({ ...equipForm, cargadorFechaCompra: e.target.value })} />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Observaciones Generales</label>
+                  <textarea
+                    className="nm-input"
+                    rows={2}
+                    placeholder="Observaciones adicionales sobre el equipo..."
+                    style={{ resize: 'none', fontFamily: 'var(--font-body)' }}
+                    value={equipForm.observaciones}
+                    onChange={(e) => setEquipForm({ ...equipForm, observaciones: e.target.value })}
+                  />
                 </div>
 
-                <button type="submit" className="nm-btn nm-btn-primary" style={{ width: '100%' }}>Guardar Equipo</button>
+                <button type="submit" className="nm-btn nm-btn-primary" style={{ width: '100%', padding: '0.75rem', fontSize: '0.95rem' }}>Guardar Equipo</button>
               </form>
             )}
 
@@ -1467,7 +1975,7 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                     required
                   >
                     <option value="">Selecciona un Equipo</option>
-                    {equipments.map(eq => <option key={eq.id} value={eq.id}>{eq.tipoEquipo} ({eq.noInventario}) - {eq.marca}</option>)}
+                    {equipments.map(eq => <option key={eq.id} value={eq.id}>{eq.tipoEquipo} ({eq.noInventario}) - {eq.marca} {eq.modelo}</option>)}
                   </select>
                 </div>
 
@@ -1577,6 +2085,441 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
               </form>
             )}
 
+            {/* HOJA DE VIDA OFICIAL (AUT-FOR-231) */}
+            {modalType === 'HOJA_DE_VIDA' && selectedEquipmentForHoja && (() => {
+              const eq = selectedEquipmentForHoja;
+              const phone = isPhone(eq);
+              const eqMaints = maintenances.filter(m => m.idEquipo === eq.id).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+              const eqAudit = auditLogs.filter(a => a.recordId === eq.id || a.tableName === 'inventario' && a.newValues?.id === eq.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+              return (
+                <div className="hoja-vida-wrapper">
+                  <div className="hoja-vida-toolbar no-print">
+                    <button className="nm-btn" onClick={() => setModalType('DOC_SELECT')}>
+                      <ArrowLeft size={16} /> Volver a Documentos
+                    </button>
+                    <button className="nm-btn nm-btn-primary" onClick={() => window.print()}>
+                      <Printer size={16} /> Imprimir / Exportar a PDF
+                    </button>
+                    <button className="nm-btn" onClick={() => setModalOpen(false)}>
+                      <X size={16} /> Cerrar
+                    </button>
+                  </div>
+
+                  <div className="hoja-vida-doc" id="hoja-de-vida-document">
+                    {/* Header Institucional */}
+                    <div className="hoja-header">
+                      <div className="hoja-logo">
+                        AUTOBOY
+                      </div>
+                      <div className="hoja-title-box">
+                        <h3>SISTEMA INTEGRADO DE GESTION</h3>
+                        <h4>HOJA DE VIDA - EQUIPOS TECNOLOGICOS</h4>
+                        <div className="hoja-code">Codigo: AUT-FOR-231 | Version: 2</div>
+                      </div>
+                      <div className="hoja-badge-box">
+                        <div style={{ fontWeight: 800, fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '0.2rem' }}>{eq.marca}</div>
+                        <span className="hoja-status-badge">{eq.estado || 'Activo'}</span>
+                      </div>
+                    </div>
+
+                    {/* 1. INFORMACION GENERAL */}
+                    <div className="hoja-section-title">INFORMACION GENERAL</div>
+                    <table className="hoja-table">
+                      <tbody>
+                        <tr>
+                          <th>Area / Sucursal</th>
+                          <td>{eq.areaSucursal || eq.agencia?.nombre || '-'}</td>
+                          <th>Responsable</th>
+                          <td>{eq.usuarioSucursal || 'Sin asignar'}</td>
+                        </tr>
+                        <tr>
+                          <th>Ubicacion</th>
+                          <td>{eq.ubicacion || eq.agencia?.nombre || '-'}</td>
+                          <th>Reubicacion</th>
+                          <td>{eq.reubicacion || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                          <th>Tipo de Equipo</th>
+                          <td>{eq.tipoEquipo}</td>
+                          <th>Fecha de Compra</th>
+                          <td>{eq.fechaCompra || '-'}</td>
+                        </tr>
+                        <tr>
+                          <th>Vida Util</th>
+                          <td><strong>{eq.vidaUtil || '3 años'}</strong></td>
+                          <th>Cod. Inventario</th>
+                          <td><strong>{eq.noInventario}</strong></td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* 2. ESPECIFICACIONES TECNICAS */}
+                    <div className="hoja-section-title">ESPECIFICACIONES TECNICAS</div>
+                    <table className="hoja-table">
+                      <tbody>
+                        <tr>
+                          <th>Marca</th>
+                          <td>{eq.marca}</td>
+                          <th>Modelo</th>
+                          <td>{eq.modelo}</td>
+                        </tr>
+                        <tr>
+                          <th>Procesador</th>
+                          <td>{eq.procesador || '-'}</td>
+                          <th>Memoria RAM</th>
+                          <td>{eq.memoriaRam || '-'}</td>
+                        </tr>
+                        <tr>
+                          <th>Almacenamiento</th>
+                          <td>{eq.discoDuro || '-'}</td>
+                          <th>Serial</th>
+                          <td>{eq.serial || '-'}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* 3. IDENTIFICADORES Y LINEA (Solo teléfonos o si tiene datos móviles) */}
+                    {phone && (
+                      <>
+                        <div className="hoja-section-title">IDENTIFICADORES Y LINEA</div>
+                        <table className="hoja-table">
+                          <tbody>
+                            <tr>
+                              <th>IMEI 1</th>
+                              <td>{eq.imei1 || '-'}</td>
+                              <th>IMEI 2</th>
+                              <td>{eq.imei2 || '-'}</td>
+                            </tr>
+                            <tr>
+                              <th>Numero Linea</th>
+                              <td>{eq.numeroLinea || '-'}</td>
+                              <th>IMEI SimCard</th>
+                              <td>{eq.imeiSimcard || '-'}</td>
+                            </tr>
+                            <tr>
+                              <th>Correo</th>
+                              <td>{eq.correo || '-'}</td>
+                              <th>Contrasena</th>
+                              <td>{eq.claveCorreo ? '••••••••' : '-'}</td>
+                            </tr>
+                            <tr>
+                              <th>App Lock</th>
+                              <td>{eq.appLock || 'N/A'}</td>
+                              <th>Estado</th>
+                              <td>{eq.estado || 'Activo'}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </>
+                    )}
+
+                    {/* 4. PERIFÉRICOS / ACCESORIOS */}
+                    <div className="hoja-section-title">ACCESORIOS Y PERIFERICOS</div>
+                    {phone ? (
+                      <table className="hoja-table hoja-table-grid">
+                        <thead>
+                          <tr>
+                            <th>TIPO</th>
+                            <th>FECHA COMPRA</th>
+                            <th>MARCA/MOD</th>
+                            <th>N. INV</th>
+                            <th>SERIAL</th>
+                            <th>OBS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>CARGADOR</td>
+                            <td>{eq.cargadorFechaCompra || eq.fechaCompra || '-'}</td>
+                            <td>{eq.cargadorMarca || eq.marca || '-'}</td>
+                            <td>{eq.noInventario}</td>
+                            <td>{eq.cargadorSerial || 'N/A'}</td>
+                            <td>-</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    ) : (
+                      <table className="hoja-table">
+                        <tbody>
+                          <tr>
+                            <th>Teclado</th>
+                            <td>{eq.teclado || 'N/A'}</td>
+                            <th>Mouse</th>
+                            <td>{eq.mouse || 'N/A'}</td>
+                          </tr>
+                          <tr>
+                            <th>Impresora</th>
+                            <td>{eq.impresora || 'N/A'}</td>
+                            <th>Otros</th>
+                            <td>{eq.otros || 'N/A'}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* 5. REGISTRO DE MANTENIMIENTOS */}
+                    <div className="hoja-section-title">REGISTRO DE MANTENIMIENTOS</div>
+                    {eqMaints.length === 0 ? (
+                      <div style={{ padding: '0.6rem', border: '1px solid #cbd5e1', fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic', marginBottom: '0.5rem' }}>
+                        Sin registros de mantenimiento.
+                      </div>
+                    ) : (
+                      <table className="hoja-table hoja-table-grid">
+                        <thead>
+                          <tr>
+                            <th>FECHA</th>
+                            <th>TIPO</th>
+                            <th>DESCRIPCION</th>
+                            <th>REALIZADO POR</th>
+                            <th>OBSERVACIONES</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {eqMaints.map(m => (
+                            <tr key={m.id}>
+                              <td>{new Date(m.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' })}</td>
+                              <td><strong>{m.tipo}</strong></td>
+                              <td style={{ textAlign: 'left' }}>{m.descripcion}</td>
+                              <td>{m.realizadoPor}</td>
+                              <td style={{ textAlign: 'left' }}>{m.observaciones || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* 6. OBSERVACIONES */}
+                    <div className="hoja-section-title">OBSERVACIONES</div>
+                    <div style={{ padding: '0.6rem', border: '1px solid #cbd5e1', fontSize: '0.75rem', color: eq.observaciones ? '#1e293b' : '#64748b', fontStyle: eq.observaciones ? 'normal' : 'italic', marginBottom: '0.5rem' }}>
+                      {eq.observaciones || 'Sin observaciones.'}
+                    </div>
+
+                    {/* 7. CONTROL DE CAMBIOS */}
+                    <div className="hoja-section-title">HISTORIAL DE CAMBIOS (CONTROL DE CAMBIO)</div>
+                    {eqAudit.length === 0 ? (
+                      <div style={{ padding: '0.6rem', border: '1px solid #cbd5e1', fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic' }}>
+                        Sin modificaciones registradas en bitácora.
+                      </div>
+                    ) : (
+                      <table className="hoja-table hoja-table-grid">
+                        <thead>
+                          <tr>
+                            <th>Fecha</th>
+                            <th>Acción</th>
+                            <th>Estado Equipo</th>
+                            <th>Motivo / Detalle</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {eqAudit.slice(0, 5).map(a => (
+                            <tr key={a.id}>
+                              <td>{new Date(a.createdAt).toLocaleString()}</td>
+                              <td>{a.action}</td>
+                              <td>{eq.estado || 'Buen estado'}</td>
+                              <td style={{ textAlign: 'left' }}>Actualización de información de equipo</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {/* Footer */}
+                    <div className="hoja-footer">
+                      <span>Documento generado automaticamente por el Sistema de Inventario - Autoboy</span>
+                      <span>Confidencial - Uso interno</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ACTA DE ENTREGA OFICIAL (AUT-FOR-15) */}
+            {modalType === 'ACTA_DE_ENTREGA' && selectedEquipmentForHoja && (() => {
+              const eq = selectedEquipmentForHoja;
+
+              return (
+                <div className="acta-entrega-wrapper">
+                  {/* Toolbar de Personalización Rápida & Impresión */}
+                  <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.85rem 1rem', background: 'var(--glass-bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--glass-border-subtle)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="nm-btn" onClick={() => setModalType('DOC_SELECT')}>
+                          <ArrowLeft size={16} /> Volver a Documentos
+                        </button>
+                        <button className="nm-btn nm-btn-primary" onClick={() => window.print()} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}>
+                          <Printer size={16} /> Imprimir / Exportar a PDF
+                        </button>
+                      </div>
+                      <button className="nm-btn" onClick={() => setModalOpen(false)}>
+                        <X size={16} /> Cerrar
+                      </button>
+                    </div>
+
+                    {/* Ajustes rápidos del acta */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.6rem', paddingTop: '0.4rem', borderTop: '1px solid var(--glass-border-subtle)' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>C.C. Quien Recibe:</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
+                          placeholder="Ej: 111111"
+                          value={actaData.cedulaUsuario}
+                          onChange={(e) => setActaData({ ...actaData, cedulaUsuario: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Quien Entrega (Encargado):</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
+                          value={actaData.quienEntrega}
+                          onChange={(e) => setActaData({ ...actaData, quienEntrega: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Responsable Anterior:</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
+                          placeholder="Ej: YEIMMY VIVIANA..."
+                          value={actaData.responsableAnterior}
+                          onChange={(e) => setActaData({ ...actaData, responsableAnterior: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Valor Estimado ($):</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
+                          placeholder="Ej: 4.000.000"
+                          value={actaData.valorEstimado}
+                          onChange={(e) => setActaData({ ...actaData, valorEstimado: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Fecha del Acta:</label>
+                        <input
+                          type="text"
+                          className="nm-input"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
+                          value={actaData.fechaActa}
+                          onChange={(e) => setActaData({ ...actaData, fechaActa: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Documento Imprimible Acta de Entrega */}
+                  <div className="acta-entrega-doc" id="acta-entrega-document">
+                    {/* Header Banner */}
+                    <div className="acta-header-banner">
+                      <div className="acta-logo-text">
+                        AUTOBOY
+                      </div>
+                      <div className="acta-title-text">
+                        <h3>ACTA DE ENTREGA Y RECIBO DE EQUIPOS / HERRAMIENTAS</h3>
+                        <div>Codigo: AUT-FOR-15</div>
+                        <div>Fecha: {actaData.fechaActa}</div>
+                      </div>
+                    </div>
+
+                    {/* Texto de Declaración y Compromiso */}
+                    <div className="acta-declaracion">
+                      Yo: <strong>{eq.usuarioSucursal || 'El colaborador'}</strong> identificado con C.C. <strong>{actaData.cedulaUsuario || '_____________'}</strong> declaro haber recibido los equipos y/o herramientas lo cual me compromete a cuidarlos y utilizarlos correctamente de acuerdo a las actividades que se me sean asignadas, tambien a devolverlos cuando tenga que dejar el servicio por algun motivo o por el desgaste de uso y/o con firma me responsabilizo por la perdida o danos de los equipos o herramientas bajo mi cargo.
+                    </div>
+
+                    {/* DATOS DEL COLABORADOR Y EQUIPO */}
+                    <div className="acta-section-title">DATOS DEL COLABORADOR Y EQUIPO</div>
+                    <table className="acta-table">
+                      <tbody>
+                        <tr>
+                          <th>Nombre quien recibe</th>
+                          <td><strong>{eq.usuarioSucursal || 'Sin asignar'}</strong></td>
+                          <th style={{ width: '15%' }}>C.C.</th>
+                          <td>{actaData.cedulaUsuario || '111111'}</td>
+                        </tr>
+                        <tr>
+                          <th>Nombre quien entrega (encargado)</th>
+                          <td colSpan={3}><strong>{actaData.quienEntrega}</strong></td>
+                        </tr>
+                        <tr>
+                          <th>Area / Sucursal</th>
+                          <td>{eq.areaSucursal || eq.agencia?.nombre || '-'}</td>
+                          <th style={{ width: '15%' }}>Responsable anterior</th>
+                          <td>{actaData.responsableAnterior || eq.usuarioSucursal || '-'}</td>
+                        </tr>
+                        <tr>
+                          <th>Marca</th>
+                          <td>{eq.marca}</td>
+                          <th style={{ width: '15%' }}>Modelo</th>
+                          <td>{eq.modelo}</td>
+                        </tr>
+                        <tr>
+                          <th>Serial</th>
+                          <td>{eq.serial || eq.imei1 || '-'}</td>
+                          <th style={{ width: '15%' }}>Codigo Inventario</th>
+                          <td><strong>{eq.noInventario}</strong></td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* DETALLE DE ELEMENTOS ENTREGADOS */}
+                    <div className="acta-section-title">DETALLE DE ELEMENTOS ENTREGADOS</div>
+                    <table className="acta-table acta-table-grid">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '60%' }}>Descripcion</th>
+                          <th style={{ width: '12%', textAlign: 'center' }}>Cantidad</th>
+                          <th style={{ width: '14%', textAlign: 'right' }}>Valor unitario</th>
+                          <th style={{ width: '14%', textAlign: 'right' }}>Valor total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>{eq.marca} {eq.modelo} - Serial: {eq.serial || eq.imei1 || eq.noInventario}</td>
+                          <td style={{ textAlign: 'center' }}>1</td>
+                          <td style={{ textAlign: 'right' }}>$ {actaData.valorEstimado}</td>
+                          <td style={{ textAlign: 'right' }}><strong>$ {actaData.valorEstimado}</strong></td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* FIRMAS */}
+                    <div className="acta-section-title">FIRMAS</div>
+                    <div className="acta-firmas-container">
+                      <div className="acta-firma-col">
+                        <div className="acta-firma-title">Quien entrega</div>
+                        <div style={{ marginTop: '2.5rem', lineHeight: '1.4' }}>
+                          <div>Firma: ______________________________</div>
+                          <div style={{ marginTop: '0.4rem' }}>Nombre: <strong>{actaData.quienEntrega}</strong></div>
+                          <div style={{ marginTop: '0.2rem' }}>C.C.: _____________________________</div>
+                        </div>
+                      </div>
+
+                      <div className="acta-firma-col">
+                        <div className="acta-firma-title">Quien recibe</div>
+                        <div style={{ marginTop: '2.5rem', lineHeight: '1.4' }}>
+                          <div>Firma: ______________________________</div>
+                          <div style={{ marginTop: '0.4rem' }}>Nombre: <strong>{eq.usuarioSucursal || 'Sin asignar'}</strong></div>
+                          <div style={{ marginTop: '0.2rem' }}>C.C.: <strong>{actaData.cedulaUsuario || '111111'}</strong></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="acta-footer">
+                      Acta de entrega y recibo de equipos/herramientas - Sistema de Inventario Autoboy
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* DETALLES DE AUDITORIA */}
             {modalType === 'AUDIT_DETAIL' && selectedAuditLog && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -1603,84 +2546,130 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
             )}
 
             {/* DETALLES DE EQUIPO */}
-            {modalType === 'EQUIPMENT_DETAIL' && selectedEquipmentDetail && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div className="nm-card-sunken" style={{ padding: '1rem', fontSize: '0.85rem' }}>
-                  <p style={{ marginBottom: '0.3rem' }}><strong>N° Inventario:</strong> {selectedEquipmentDetail.noInventario}</p>
-                  <p style={{ marginBottom: '0.3rem' }}><strong>Sede / Agencia:</strong> {selectedEquipmentDetail.agencia?.nombre || 'N/A'}</p>
-                  <p style={{ marginBottom: '0.3rem' }}><strong>Tipo de Equipo:</strong> {selectedEquipmentDetail.tipoEquipo}</p>
-                  <p style={{ marginBottom: '0.3rem' }}><strong>Marca / Modelo:</strong> {selectedEquipmentDetail.marca} {selectedEquipmentDetail.modelo}</p>
-                  <p><strong>Referencia:</strong> {selectedEquipmentDetail.referencia}</p>
-                </div>
+            {modalType === 'EQUIPMENT_DETAIL' && selectedEquipmentDetail && (() => {
+              const eq = selectedEquipmentDetail;
+              const phone = isPhone(eq);
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                  <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
-                    <h5 style={{ fontWeight: 600, marginBottom: '0.4rem', color: 'var(--primary-light)' }}>Especificaciones</h5>
-                    <p style={{ marginBottom: '0.25rem' }}><strong>Procesador:</strong> {selectedEquipmentDetail.procesador || 'N/A'}</p>
-                    <p style={{ marginBottom: '0.25rem' }}><strong>Memoria RAM:</strong> {selectedEquipmentDetail.memoriaRam || 'N/A'}</p>
-                    <p style={{ marginBottom: '0.25rem' }}><strong>Disco Duro:</strong> {selectedEquipmentDetail.discoDuro || 'N/A'}</p>
-                    <p><strong>Serial:</strong> {selectedEquipmentDetail.serial || 'N/A'}</p>
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 style={{ fontSize: '1.05rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      {phone ? <Smartphone size={18} style={{ color: '#10b981' }} /> : <Laptop size={18} style={{ color: 'var(--primary-light)' }} />}
+                      {eq.tipoEquipo} ({eq.noInventario})
+                    </h4>
+                    <button
+                      className="nm-btn nm-btn-primary"
+                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                      onClick={() => {
+                        setSelectedEquipmentForHoja(eq);
+                        setActaData({
+                          cedulaUsuario: eq.cedulaUsuario || '',
+                          quienEntrega: eq.quienEntrega || user?.username || 'YEIMMY VIVIANA CAICEDO MUÑOZ',
+                          cargoQuienEntrega: 'Administrador de Sistemas',
+                          responsableAnterior: eq.responsableAnterior || eq.usuarioSucursal || '',
+                          valorEstimado: eq.valorEstimado || '4.000.000',
+                          fechaActa: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+                        });
+                        setModalType('DOC_SELECT');
+                      }}
+                    >
+                      <FileText size={14} /> Documentos Oficiales (PDF)
+                    </button>
                   </div>
 
-                  <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
-                    <h5 style={{ fontWeight: 600, marginBottom: '0.4rem', color: 'var(--primary-light)' }}>Asignación</h5>
-                    <p style={{ marginBottom: '0.25rem' }}><strong>Usuario:</strong> {selectedEquipmentDetail.usuarioSucursal || 'N/A'}</p>
-                    <p style={{ marginBottom: '0.25rem' }}><strong>Área:</strong> {selectedEquipmentDetail.areaSucursal || 'N/A'}</p>
-                    <p><strong>Cargo:</strong> {selectedEquipmentDetail.cargo || 'N/A'}</p>
+                  <div className="nm-card-sunken" style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                    <p style={{ marginBottom: '0.3rem' }}><strong>N° Inventario:</strong> {eq.noInventario}</p>
+                    <p style={{ marginBottom: '0.3rem' }}><strong>Sede / Agencia:</strong> {eq.agencia?.nombre || 'N/A'}</p>
+                    <p style={{ marginBottom: '0.3rem' }}><strong>Marca / Modelo:</strong> {eq.marca} {eq.modelo}</p>
+                    <p style={{ marginBottom: '0.3rem' }}><strong>Referencia:</strong> {eq.referencia || 'N/A'}</p>
+                    <p style={{ marginBottom: '0.3rem' }}><strong>Vida Útil:</strong> {eq.vidaUtil || '3 años'} | <strong>Fecha Compra:</strong> {eq.fechaCompra || 'N/A'}</p>
+                    <p><strong>Estado:</strong> {eq.estado || 'Activo'} | <strong>Ubicación:</strong> {eq.ubicacion || 'N/A'}</p>
                   </div>
-                </div>
 
-                <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
-                  <h5 style={{ fontWeight: 600, marginBottom: '0.4rem', color: 'var(--primary-light)' }}>Accesorios</h5>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem' }}>
-                    <p><strong>Teclado:</strong> {selectedEquipmentDetail.teclado || 'N/A'}</p>
-                    <p><strong>Mouse:</strong> {selectedEquipmentDetail.mouse || 'N/A'}</p>
-                    <p><strong>Impresora:</strong> {selectedEquipmentDetail.impresora || 'N/A'}</p>
-                    <p><strong>Otros:</strong> {selectedEquipmentDetail.otros || 'N/A'}</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                    <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
+                      <h5 style={{ fontWeight: 600, marginBottom: '0.4rem', color: 'var(--primary-light)' }}>Especificaciones</h5>
+                      <p style={{ marginBottom: '0.25rem' }}><strong>Procesador:</strong> {eq.procesador || 'N/A'}</p>
+                      <p style={{ marginBottom: '0.25rem' }}><strong>Memoria RAM:</strong> {eq.memoriaRam || 'N/A'}</p>
+                      <p style={{ marginBottom: '0.25rem' }}><strong>Almacenamiento:</strong> {eq.discoDuro || 'N/A'}</p>
+                      <p><strong>Serial:</strong> {eq.serial || 'N/A'}</p>
+                    </div>
+
+                    <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
+                      <h5 style={{ fontWeight: 600, marginBottom: '0.4rem', color: 'var(--primary-light)' }}>Asignación</h5>
+                      <p style={{ marginBottom: '0.25rem' }}><strong>Usuario:</strong> {eq.usuarioSucursal || 'N/A'}</p>
+                      <p style={{ marginBottom: '0.25rem' }}><strong>Área:</strong> {eq.areaSucursal || 'N/A'}</p>
+                      <p><strong>Cargo:</strong> {eq.cargo || 'N/A'}</p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Historial Completo de Mantenimientos Realizados */}
-                <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
-                  <h5 style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--primary-light)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <History size={16} />
-                    Historial Completo de Mantenimientos ({maintenances.filter(m => m.idEquipo === selectedEquipmentDetail.id).length})
-                  </h5>
-                  {maintenances.filter(m => m.idEquipo === selectedEquipmentDetail.id).length === 0 ? (
-                    <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>No hay registros de mantenimientos previos para este equipo.</p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '220px', overflowY: 'auto' }}>
-                      {maintenances
-                        .filter(m => m.idEquipo === selectedEquipmentDetail.id)
-                        .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-                        .map(m => (
-                          <div key={m.id} style={{ padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-sm)', background: 'var(--glass-bg)', border: '1px solid var(--glass-border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                <CheckCircle2 size={13} style={{ color: '#10b981' }} />
-                                {new Date(m.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' })}
-                                <span style={{
-                                  padding: '0.1rem 0.4rem',
-                                  borderRadius: '3px',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 600,
-                                  backgroundColor: m.tipo === 'PREVENTIVO' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                  color: m.tipo === 'PREVENTIVO' ? 'var(--success)' : 'var(--error)'
-                                }}>
-                                  {m.tipo}
-                                </span>
-                              </div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-main)', marginTop: '0.2rem' }}>{m.descripcion}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Técnico: <strong>{m.realizadoPor}</strong></div>
-                              {m.observaciones && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '0.1rem' }}>Obs: {m.observaciones}</div>}
-                            </div>
-                          </div>
-                        ))}
+                  {phone && (
+                    <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
+                      <h5 style={{ fontWeight: 600, marginBottom: '0.4rem', color: '#10b981' }}>Datos de Telefonía</h5>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.4rem' }}>
+                        <p><strong>Línea:</strong> {eq.numeroLinea || 'N/A'}</p>
+                        <p><strong>IMEI 1:</strong> {eq.imei1 || 'N/A'}</p>
+                        <p><strong>IMEI 2:</strong> {eq.imei2 || 'N/A'}</p>
+                        <p><strong>Correo:</strong> {eq.correo || 'N/A'}</p>
+                        <p><strong>Cargador:</strong> {eq.cargadorMarca || 'N/A'}</p>
+                      </div>
                     </div>
                   )}
+
+                  {!phone && (
+                    <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
+                      <h5 style={{ fontWeight: 600, marginBottom: '0.4rem', color: 'var(--primary-light)' }}>Accesorios</h5>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem' }}>
+                        <p><strong>Teclado:</strong> {eq.teclado || 'N/A'}</p>
+                        <p><strong>Mouse:</strong> {eq.mouse || 'N/A'}</p>
+                        <p><strong>Impresora:</strong> {eq.impresora || 'N/A'}</p>
+                        <p><strong>Otros:</strong> {eq.otros || 'N/A'}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Historial Completo de Mantenimientos Realizados */}
+                  <div className="nm-card-sunken" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
+                    <h5 style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--primary-light)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <History size={16} />
+                      Historial Completo de Mantenimientos ({maintenances.filter(m => m.idEquipo === eq.id).length})
+                    </h5>
+                    {maintenances.filter(m => m.idEquipo === eq.id).length === 0 ? (
+                      <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>No hay registros de mantenimientos previos para este equipo.</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '220px', overflowY: 'auto' }}>
+                        {maintenances
+                          .filter(m => m.idEquipo === eq.id)
+                          .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+                          .map(m => (
+                            <div key={m.id} style={{ padding: '0.6rem 0.75rem', borderRadius: 'var(--radius-sm)', background: 'var(--glass-bg)', border: '1px solid var(--glass-border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  <CheckCircle2 size={13} style={{ color: '#10b981' }} />
+                                  {new Date(m.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' })}
+                                  <span style={{
+                                    padding: '0.1rem 0.4rem',
+                                    borderRadius: '3px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    backgroundColor: m.tipo === 'PREVENTIVO' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                    color: m.tipo === 'PREVENTIVO' ? 'var(--success)' : 'var(--error)'
+                                  }}>
+                                    {m.tipo}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-main)', marginTop: '0.2rem' }}>{m.descripcion}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Técnico: <strong>{m.realizadoPor}</strong></div>
+                                {m.observaciones && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '0.1rem' }}>Obs: {m.observaciones}</div>}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         </div>
       )}

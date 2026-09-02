@@ -56,6 +56,37 @@ import { AuditLog } from '../../models/audit-log/audit-log.entity';
           });
           await poolConexion.initialize();
           console.log("Conexión establecida con base de datos: ", process.env.DATABASE_URL ? 'Supabase/Cloud' : String(process.env.DATABASE));
+
+          // Migración automática de columnas para teléfonos y vida útil (idempotente)
+          try {
+            await poolConexion.query(`
+              ALTER TABLE inventario
+              ADD COLUMN IF NOT EXISTS vida_util VARCHAR(50),
+              ADD COLUMN IF NOT EXISTS fecha_compra VARCHAR(50),
+              ADD COLUMN IF NOT EXISTS ubicacion VARCHAR(100),
+              ADD COLUMN IF NOT EXISTS reubicacion VARCHAR(100),
+              ADD COLUMN IF NOT EXISTS estado VARCHAR(50) DEFAULT 'Activo',
+              ADD COLUMN IF NOT EXISTS imei_1 VARCHAR(100),
+              ADD COLUMN IF NOT EXISTS imei_2 VARCHAR(100),
+              ADD COLUMN IF NOT EXISTS numero_linea VARCHAR(50),
+              ADD COLUMN IF NOT EXISTS imei_simcard VARCHAR(100),
+              ADD COLUMN IF NOT EXISTS correo VARCHAR(150),
+              ADD COLUMN IF NOT EXISTS clave_correo VARCHAR(100),
+              ADD COLUMN IF NOT EXISTS app_lock VARCHAR(100),
+              ADD COLUMN IF NOT EXISTS cargador_marca VARCHAR(100),
+              ADD COLUMN IF NOT EXISTS cargador_serial VARCHAR(100),
+              ADD COLUMN IF NOT EXISTS cargador_fecha_compra VARCHAR(50),
+              ADD COLUMN IF NOT EXISTS observaciones TEXT,
+              ADD COLUMN IF NOT EXISTS cedula_usuario VARCHAR(50),
+              ADD COLUMN IF NOT EXISTS quien_entrega VARCHAR(100),
+              ADD COLUMN IF NOT EXISTS responsable_anterior VARCHAR(100),
+              ADD COLUMN IF NOT EXISTS valor_estimado VARCHAR(50);
+            `);
+            console.log("Esquema de base de datos verificado y actualizado con soporte de telefonía y vida útil.");
+          } catch (migErr) {
+            console.warn("Aviso de migración de esquema:", migErr);
+          }
+
           return poolConexion;
         } catch (elError) {
           console.log("Fallo al hacer la conexión con la base de datos");

@@ -25,6 +25,21 @@ export class Inventario {
   @Column({ type: 'varchar', length: 50, name: 'modelo', nullable: false })
   public modelo!: string;
 
+  @Column({ type: 'varchar', length: 50, name: 'vida_util', nullable: true })
+  public vidaUtil?: string;
+
+  @Column({ type: 'varchar', length: 50, name: 'fecha_compra', nullable: true })
+  public fechaCompra?: string;
+
+  @Column({ type: 'varchar', length: 100, name: 'ubicacion', nullable: true })
+  public ubicacion?: string;
+
+  @Column({ type: 'varchar', length: 100, name: 'reubicacion', nullable: true })
+  public reubicacion?: string;
+
+  @Column({ type: 'varchar', length: 50, name: 'estado', nullable: true, default: 'Activo' })
+  public estado?: string;
+
   @Column({ type: 'varchar', length: 100, name: 'procesador', nullable: true })
   public procesador?: string;
 
@@ -60,6 +75,53 @@ export class Inventario {
 
   @Column({ type: 'varchar', length: 255, name: 'otros', nullable: true })
   public otros?: string;
+
+  // Campos específicos de Teléfonos / Celulares
+  @Column({ type: 'varchar', length: 100, name: 'imei_1', nullable: true })
+  public imei1?: string;
+
+  @Column({ type: 'varchar', length: 100, name: 'imei_2', nullable: true })
+  public imei2?: string;
+
+  @Column({ type: 'varchar', length: 50, name: 'numero_linea', nullable: true })
+  public numeroLinea?: string;
+
+  @Column({ type: 'varchar', length: 100, name: 'imei_simcard', nullable: true })
+  public imeiSimcard?: string;
+
+  @Column({ type: 'varchar', length: 150, name: 'correo', nullable: true })
+  public correo?: string;
+
+  @Column({ type: 'varchar', length: 100, name: 'clave_correo', nullable: true })
+  public claveCorreo?: string;
+
+  @Column({ type: 'varchar', length: 100, name: 'app_lock', nullable: true })
+  public appLock?: string;
+
+  @Column({ type: 'varchar', length: 100, name: 'cargador_marca', nullable: true })
+  public cargadorMarca?: string;
+
+  @Column({ type: 'varchar', length: 100, name: 'cargador_serial', nullable: true })
+  public cargadorSerial?: string;
+
+  @Column({ type: 'varchar', length: 50, name: 'cargador_fecha_compra', nullable: true })
+  public cargadorFechaCompra?: string;
+
+  @Column({ type: 'text', name: 'observaciones', nullable: true })
+  public observaciones?: string;
+
+  // Campos para Acta de Entrega (AUT-FOR-15)
+  @Column({ type: 'varchar', length: 50, name: 'cedula_usuario', nullable: true })
+  public cedulaUsuario?: string;
+
+  @Column({ type: 'varchar', length: 100, name: 'quien_entrega', nullable: true })
+  public quienEntrega?: string;
+
+  @Column({ type: 'varchar', length: 100, name: 'responsable_anterior', nullable: true })
+  public responsableAnterior?: string;
+
+  @Column({ type: 'varchar', length: 50, name: 'valor_estimado', nullable: true })
+  public valorEstimado?: string;
 
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'created_at' })
   public createdAt!: Date;

@@ -47,6 +47,11 @@ export class InventarioService {
       marca,
       referencia,
       modelo,
+      vidaUtil,
+      fechaCompra,
+      ubicacion,
+      reubicacion,
+      estado,
       procesador,
       discoDuro,
       memoriaRam,
@@ -58,7 +63,22 @@ export class InventarioService {
       mouse,
       teclado,
       impresora,
-      otros
+      otros,
+      imei1,
+      imei2,
+      numeroLinea,
+      imeiSimcard,
+      correo,
+      claveCorreo,
+      appLock,
+      cargadorMarca,
+      cargadorSerial,
+      cargadorFechaCompra,
+      observaciones,
+      cedulaUsuario,
+      quienEntrega,
+      responsableAnterior,
+      valorEstimado
     } = body;
 
     if (!idAgencia || !noInventario || !tipoEquipo || !marca || !referencia || !modelo) {
@@ -82,6 +102,12 @@ export class InventarioService {
         equipo.marca = String(marca).trim();
         equipo.referencia = String(referencia).trim();
         equipo.modelo = String(modelo).trim();
+        equipo.vidaUtil = vidaUtil ? String(vidaUtil).trim() : undefined;
+        equipo.fechaCompra = fechaCompra ? String(fechaCompra).trim() : undefined;
+        equipo.ubicacion = ubicacion ? String(ubicacion).trim() : undefined;
+        equipo.reubicacion = reubicacion ? String(reubicacion).trim() : undefined;
+        equipo.estado = estado ? String(estado).trim() : 'Activo';
+
         equipo.procesador = procesador ? String(procesador).trim() : undefined;
         equipo.discoDuro = discoDuro ? String(discoDuro).trim() : undefined;
         equipo.memoriaRam = memoriaRam ? String(memoriaRam).trim() : undefined;
@@ -94,6 +120,25 @@ export class InventarioService {
         equipo.teclado = teclado ? String(teclado).trim() : undefined;
         equipo.impresora = impresora ? String(impresora).trim() : undefined;
         equipo.otros = otros ? String(otros).trim() : undefined;
+
+        // Telefonía
+        equipo.imei1 = imei1 ? String(imei1).trim() : undefined;
+        equipo.imei2 = imei2 ? String(imei2).trim() : undefined;
+        equipo.numeroLinea = numeroLinea ? String(numeroLinea).trim() : undefined;
+        equipo.imeiSimcard = imeiSimcard ? String(imeiSimcard).trim() : undefined;
+        equipo.correo = correo ? String(correo).trim() : undefined;
+        equipo.claveCorreo = claveCorreo ? String(claveCorreo).trim() : undefined;
+        equipo.appLock = appLock ? String(appLock).trim() : undefined;
+        equipo.cargadorMarca = cargadorMarca ? String(cargadorMarca).trim() : undefined;
+        equipo.cargadorSerial = cargadorSerial ? String(cargadorSerial).trim() : undefined;
+        equipo.cargadorFechaCompra = cargadorFechaCompra ? String(cargadorFechaCompra).trim() : undefined;
+        equipo.observaciones = observaciones ? String(observaciones).trim() : undefined;
+
+        // Acta de entrega
+        equipo.cedulaUsuario = cedulaUsuario ? String(cedulaUsuario).trim() : undefined;
+        equipo.quienEntrega = quienEntrega ? String(quienEntrega).trim() : undefined;
+        equipo.responsableAnterior = responsableAnterior ? String(responsableAnterior).trim() : undefined;
+        equipo.valorEstimado = valorEstimado ? String(valorEstimado).trim() : undefined;
 
         const saved = await manager.save(Inventario, equipo);
 
@@ -117,6 +162,11 @@ export class InventarioService {
       marca,
       referencia,
       modelo,
+      vidaUtil,
+      fechaCompra,
+      ubicacion,
+      reubicacion,
+      estado,
       procesador,
       discoDuro,
       memoriaRam,
@@ -128,7 +178,22 @@ export class InventarioService {
       mouse,
       teclado,
       impresora,
-      otros
+      otros,
+      imei1,
+      imei2,
+      numeroLinea,
+      imeiSimcard,
+      correo,
+      claveCorreo,
+      appLock,
+      cargadorMarca,
+      cargadorSerial,
+      cargadorFechaCompra,
+      observaciones,
+      cedulaUsuario,
+      quienEntrega,
+      responsableAnterior,
+      valorEstimado
     } = body;
 
     try {
@@ -154,6 +219,12 @@ export class InventarioService {
         if (referencia) equipo.referencia = String(referencia).trim();
         if (modelo) equipo.modelo = String(modelo).trim();
         
+        if (vidaUtil !== undefined) equipo.vidaUtil = vidaUtil ? String(vidaUtil).trim() : undefined;
+        if (fechaCompra !== undefined) equipo.fechaCompra = fechaCompra ? String(fechaCompra).trim() : undefined;
+        if (ubicacion !== undefined) equipo.ubicacion = ubicacion ? String(ubicacion).trim() : undefined;
+        if (reubicacion !== undefined) equipo.reubicacion = reubicacion ? String(reubicacion).trim() : undefined;
+        if (estado !== undefined) equipo.estado = estado ? String(estado).trim() : 'Activo';
+
         if (procesador !== undefined) equipo.procesador = procesador ? String(procesador).trim() : undefined;
         if (discoDuro !== undefined) equipo.discoDuro = discoDuro ? String(discoDuro).trim() : undefined;
         if (memoriaRam !== undefined) equipo.memoriaRam = memoriaRam ? String(memoriaRam).trim() : undefined;
@@ -166,6 +237,25 @@ export class InventarioService {
         if (teclado !== undefined) equipo.teclado = teclado ? String(teclado).trim() : undefined;
         if (impresora !== undefined) equipo.impresora = impresora ? String(impresora).trim() : undefined;
         if (otros !== undefined) equipo.otros = otros ? String(otros).trim() : undefined;
+
+        // Telefonía
+        if (imei1 !== undefined) equipo.imei1 = imei1 ? String(imei1).trim() : undefined;
+        if (imei2 !== undefined) equipo.imei2 = imei2 ? String(imei2).trim() : undefined;
+        if (numeroLinea !== undefined) equipo.numeroLinea = numeroLinea ? String(numeroLinea).trim() : undefined;
+        if (imeiSimcard !== undefined) equipo.imeiSimcard = imeiSimcard ? String(imeiSimcard).trim() : undefined;
+        if (correo !== undefined) equipo.correo = correo ? String(correo).trim() : undefined;
+        if (claveCorreo !== undefined) equipo.claveCorreo = claveCorreo ? String(claveCorreo).trim() : undefined;
+        if (appLock !== undefined) equipo.appLock = appLock ? String(appLock).trim() : undefined;
+        if (cargadorMarca !== undefined) equipo.cargadorMarca = cargadorMarca ? String(cargadorMarca).trim() : undefined;
+        if (cargadorSerial !== undefined) equipo.cargadorSerial = cargadorSerial ? String(cargadorSerial).trim() : undefined;
+        if (cargadorFechaCompra !== undefined) equipo.cargadorFechaCompra = cargadorFechaCompra ? String(cargadorFechaCompra).trim() : undefined;
+        if (observaciones !== undefined) equipo.observaciones = observaciones ? String(observaciones).trim() : undefined;
+
+        // Acta de entrega
+        if (cedulaUsuario !== undefined) equipo.cedulaUsuario = cedulaUsuario ? String(cedulaUsuario).trim() : undefined;
+        if (quienEntrega !== undefined) equipo.quienEntrega = quienEntrega ? String(quienEntrega).trim() : undefined;
+        if (responsableAnterior !== undefined) equipo.responsableAnterior = responsableAnterior ? String(responsableAnterior).trim() : undefined;
+        if (valorEstimado !== undefined) equipo.valorEstimado = valorEstimado ? String(valorEstimado).trim() : undefined;
 
         const updated = await manager.save(Inventario, equipo);
 
