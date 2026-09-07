@@ -1,0 +1,20 @@
+name: Keep Render Backend Alive 🚀
+
+on:
+  schedule:
+    # Se ejecuta cada 10 minutos (Render duerme tras 15 minutos de inactividad)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub Actions
+
+jobs:
+  ping-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend Health Endpoint
+        env:
+          BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL || 'https://mantenimientos-autoboy.onrender.com' }}
+        run: |
+          echo "Enviando Ping de salud a: ${BACKEND_URL}/health"
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}\nTIME:%{time_total}s" "${BACKEND_URL}/health" || true)
+          echo "$RESPONSE"
+          echo "✅ Ping ejecutado exitosamente para mantener vivo el backend en Render."

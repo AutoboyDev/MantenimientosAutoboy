@@ -66,12 +66,21 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
   const [selectedEquipmentForHoja, setSelectedEquipmentForHoja] = useState<any>(null);
 
   // Datos para Acta de Entrega
-  const [actaData, setActaData] = useState({
+  const [actaData, setActaData] = useState<{
+    cedulaUsuario: string;
+    quienEntrega: string;
+    cargoQuienEntrega: string;
+    responsableAnterior: string;
+    valorEstimado: string;
+    valoresAccesorios: Record<number, string>;
+    fechaActa: string;
+  }>({
     cedulaUsuario: '',
     quienEntrega: 'YEIMMY VIVIANA CAICEDO MUÑOZ',
     cargoQuienEntrega: 'Administrador de Sistemas',
     responsableAnterior: '',
     valorEstimado: '4.000.000',
+    valoresAccesorios: {},
     fechaActa: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
   });
 
@@ -611,12 +620,18 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                                     onClick={() => {
                                       setSelectedEquipmentForHoja(eq);
                                       setSelectedEquipmentDetail(eq);
+                                      const accs = getEquipmentAccessories(eq);
+                                      const initialValoresAcc: Record<number, string> = {};
+                                      accs.forEach((acc, idx) => {
+                                        initialValoresAcc[idx] = (acc as any).valor || '';
+                                      });
                                       setActaData({
                                         cedulaUsuario: eq.cedulaUsuario || '',
                                         quienEntrega: eq.quienEntrega || user?.username || 'YEIMMY VIVIANA CAICEDO MUÑOZ',
                                         cargoQuienEntrega: 'Administrador de Sistemas',
                                         responsableAnterior: eq.responsableAnterior || eq.usuarioSucursal || '',
                                         valorEstimado: eq.valorEstimado || '4.000.000',
+                                        valoresAccesorios: initialValoresAcc,
                                         fechaActa: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
                                       });
                                       setModalType('DOC_SELECT');
@@ -1540,7 +1555,7 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
           <div className={`nm-card ${modalType === 'HOJA_DE_VIDA' || modalType === 'ACTA_DE_ENTREGA' ? 'modal-hoja-vida-card' : ''}`} style={{ width: '100%', maxWidth: modalType === 'HOJA_DE_VIDA' || modalType === 'ACTA_DE_ENTREGA' ? '920px' : modalType === 'DOC_SELECT' ? '680px' : modalType === 'EQUIPMENT' ? '760px' : '520px', maxHeight: '90vh', overflowY: 'auto', padding: modalType === 'HOJA_DE_VIDA' || modalType === 'ACTA_DE_ENTREGA' ? '1.5rem' : '2rem' }}>
             <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(0,0,0,0.02)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
               <h3 className="heading-font" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {modalType === 'HOJA_DE_VIDA' ? <FileText size={20} style={{ color: '#3b82f6' }} /> : modalType === 'ACTA_DE_ENTREGA' ? <FileSignature size={20} style={{ color: '#10b981' }} /> : modalType === 'DOC_SELECT' ? <FileText size={20} style={{ color: 'var(--primary-light)' }} /> : <FileCode size={20} style={{ color: 'var(--primary-light)' }} />}
+                {modalType === 'HOJA_DE_VIDA' ? <FileText size={20} style={{ color: '#3b82f6' }} /> : modalType === 'ACTA_DE_ENTREGA' ? <FileSignature size={20} style={{ color: '#2563eb' }} /> : modalType === 'DOC_SELECT' ? <FileText size={20} style={{ color: 'var(--primary-light)' }} /> : <FileCode size={20} style={{ color: 'var(--primary-light)' }} />}
                 {modalType === 'HOJA_DE_VIDA' ? 'Hoja de Vida de Equipo Tecnológico (AUT-FOR-231)' : modalType === 'ACTA_DE_ENTREGA' ? 'Acta de Entrega y Recibo de Equipos (AUT-FOR-15)' : modalType === 'DOC_SELECT' ? 'Documentos Oficiales del Equipo' : editId ? 'Editar Registro' : 'Nuevo Registro'}
               </h3>
               <button className="nm-btn" style={{ padding: '0.4rem', borderRadius: '50%' }} onClick={() => setModalOpen(false)}>
@@ -1597,18 +1612,18 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                     onClick={() => setModalType('ACTA_DE_ENTREGA')}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                      <div style={{ padding: '0.6rem', borderRadius: 'var(--radius-sm)', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                      <div style={{ padding: '0.6rem', borderRadius: 'var(--radius-sm)', background: 'rgba(37, 99, 235, 0.15)', color: '#2563eb' }}>
                         <FileSignature size={24} />
                       </div>
                       <div>
                         <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Acta de Entrega</h4>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#10b981' }}>AUT-FOR-15</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#2563eb' }}>AUT-FOR-15</span>
                       </div>
                     </div>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
                       Acta formal de entrega y recibo de equipos/herramientas, con declaración de responsabilidad del colaborador, detalle valorizado y firmas.
                     </p>
-                    <button className="nm-btn nm-btn-primary" style={{ marginTop: 'auto', width: '100%', fontSize: '0.8rem', padding: '0.5rem', backgroundColor: '#10b981', borderColor: '#10b981' }}>
+                    <button className="nm-btn nm-btn-primary" style={{ marginTop: 'auto', width: '100%', fontSize: '0.8rem', padding: '0.5rem', backgroundColor: '#2563eb', borderColor: '#2563eb' }}>
                       <FileSignature size={14} /> Abrir Acta de Entrega
                     </button>
                   </div>
@@ -2507,6 +2522,21 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
             {modalType === 'ACTA_DE_ENTREGA' && selectedEquipmentForHoja && (() => {
               const eq = selectedEquipmentForHoja;
 
+              const parseMoney = (val: string | undefined | null) => {
+                if (!val) return 0;
+                const clean = String(val).replace(/[^0-9]/g, '');
+                return clean ? parseInt(clean, 10) : 0;
+              };
+
+              const formatMoney = (val: number) => {
+                return new Intl.NumberFormat('es-CO').format(val);
+              };
+
+              const accessories = getEquipmentAccessories(eq);
+              const totalActa = parseMoney(actaData.valorEstimado) + accessories.reduce((sum, _, idx) => {
+                return sum + parseMoney(actaData.valoresAccesorios[idx]);
+              }, 0);
+
               return (
                 <div className="acta-entrega-wrapper">
                   {/* Toolbar de Personalización Rápida & Impresión */}
@@ -2516,7 +2546,7 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                         <button className="nm-btn" onClick={() => setModalType('DOC_SELECT')}>
                           <ArrowLeft size={16} /> Volver a Documentos
                         </button>
-                        <button className="nm-btn nm-btn-primary" onClick={() => window.print()} style={{ backgroundColor: '#10b981', borderColor: '#10b981' }}>
+                        <button className="nm-btn nm-btn-primary" onClick={() => window.print()} style={{ backgroundColor: '#2563eb', borderColor: '#2563eb' }}>
                           <Printer size={16} /> Imprimir / Exportar a PDF
                         </button>
                       </div>
@@ -2560,17 +2590,6 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Valor Estimado ($):</label>
-                        <input
-                          type="text"
-                          className="nm-input"
-                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
-                          placeholder="Ej: 4.000.000"
-                          value={actaData.valorEstimado}
-                          onChange={(e) => setActaData({ ...actaData, valorEstimado: e.target.value })}
-                        />
-                      </div>
-                      <div>
                         <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>Fecha del Acta:</label>
                         <input
                           type="text"
@@ -2579,6 +2598,54 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                           value={actaData.fechaActa}
                           onChange={(e) => setActaData({ ...actaData, fechaActa: e.target.value })}
                         />
+                      </div>
+                    </div>
+
+                    {/* Valores de cada ítem y accesorio */}
+                    <div style={{ marginTop: '0.2rem', paddingTop: '0.6rem', borderTop: '1px solid var(--glass-border-subtle)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary-light)' }}>
+                          Valores Individuales de Elementos a Entregar:
+                        </span>
+                        <span style={{ fontSize: '0.78rem', fontWeight: 700, background: 'rgba(37, 99, 235, 0.12)', color: '#2563eb', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-sm)' }}>
+                          Total Calculado: $ {formatMoney(totalActa)}
+                        </span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.6rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                            Valor {eq.tipoEquipo} ($):
+                          </label>
+                          <input
+                            type="text"
+                            className="nm-input"
+                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
+                            placeholder="Ej: 4.000.000"
+                            value={actaData.valorEstimado}
+                            onChange={(e) => setActaData({ ...actaData, valorEstimado: e.target.value })}
+                          />
+                        </div>
+                        {accessories.map((acc, idx) => (
+                          <div key={idx}>
+                            <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                              Valor {acc.tipo || `Accesorio ${idx + 1}`} {acc.marca ? `(${acc.marca})` : ''} ($):
+                            </label>
+                            <input
+                              type="text"
+                              className="nm-input"
+                              style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}
+                              placeholder="Ej: 50.000"
+                              value={actaData.valoresAccesorios[idx] || ''}
+                              onChange={(e) => setActaData({
+                                ...actaData,
+                                valoresAccesorios: {
+                                  ...actaData.valoresAccesorios,
+                                  [idx]: e.target.value
+                                }
+                              })}
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -2642,29 +2709,40 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                     <table className="acta-table acta-table-grid">
                       <thead>
                         <tr>
-                          <th style={{ width: '58%' }}>Descripcion</th>
-                          <th style={{ width: '12%', textAlign: 'center' }}>Cantidad</th>
-                          <th style={{ width: '15%', textAlign: 'right' }}>Valor unitario</th>
-                          <th style={{ width: '15%', textAlign: 'right' }}>Valor total</th>
+                          <th style={{ width: '55%' }}>Descripcion</th>
+                          <th style={{ width: '10%', textAlign: 'center' }}>Cantidad</th>
+                          <th style={{ width: '17%', textAlign: 'right' }}>Valor unitario</th>
+                          <th style={{ width: '18%', textAlign: 'right' }}>Valor total</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
                           <td><strong>{eq.tipoEquipo}:</strong> {eq.marca} {eq.modelo} - Serial: {eq.serial || eq.imei1 || eq.noInventario}</td>
                           <td style={{ textAlign: 'center' }}>1</td>
-                          <td style={{ textAlign: 'right' }}>$ {actaData.valorEstimado}</td>
-                          <td style={{ textAlign: 'right' }}><strong>$ {actaData.valorEstimado}</strong></td>
+                          <td style={{ textAlign: 'right' }}>$ {actaData.valorEstimado || '0'}</td>
+                          <td style={{ textAlign: 'right' }}><strong>$ {actaData.valorEstimado || '0'}</strong></td>
                         </tr>
-                        {getEquipmentAccessories(eq).map((acc, idx) => (
-                          <tr key={idx}>
-                            <td>
-                              <strong>Accesorio ({acc.tipo}):</strong> {acc.codigoActivo ? <span>Cód. Activo: <strong>{acc.codigoActivo}</strong> | </span> : ''}Marca: {acc.marca || 'N/A'} | Modelo: {acc.modelo || 'N/A'} | Serial: {acc.serial || 'N/A'}
-                            </td>
-                            <td style={{ textAlign: 'center' }}>1</td>
-                            <td style={{ textAlign: 'right' }}>$ -</td>
-                            <td style={{ textAlign: 'right' }}>$ -</td>
-                          </tr>
-                        ))}
+                        {accessories.map((acc, idx) => {
+                          const valAcc = actaData.valoresAccesorios[idx] || '-';
+                          return (
+                            <tr key={idx}>
+                              <td>
+                                <strong>Accesorio ({acc.tipo}):</strong> {acc.codigoActivo ? <span>Cód. Activo: <strong>{acc.codigoActivo}</strong> | </span> : ''}Marca: {acc.marca || 'N/A'} | Modelo: {acc.modelo || 'N/A'} | Serial: {acc.serial || 'N/A'}
+                              </td>
+                              <td style={{ textAlign: 'center' }}>1</td>
+                              <td style={{ textAlign: 'right' }}>{valAcc === '-' ? '$ -' : `$ ${valAcc}`}</td>
+                              <td style={{ textAlign: 'right' }}>{valAcc === '-' ? '$ -' : <strong>$ {valAcc}</strong>}</td>
+                            </tr>
+                          );
+                        })}
+                        <tr style={{ background: '#f8fafc', fontWeight: 700 }}>
+                          <td colSpan={3} style={{ textAlign: 'right', textTransform: 'uppercase', fontSize: '0.78rem', letterSpacing: '0.04em' }}>
+                            <strong>TOTAL GENERAL ESTIMADO:</strong>
+                          </td>
+                          <td style={{ textAlign: 'right', color: '#1d4ed8', fontSize: '0.85rem' }}>
+                            <strong>$ {formatMoney(totalActa)}</strong>
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
 
@@ -2741,12 +2819,18 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                       style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                       onClick={() => {
                         setSelectedEquipmentForHoja(eq);
+                        const accs = getEquipmentAccessories(eq);
+                        const initialValoresAcc: Record<number, string> = {};
+                        accs.forEach((acc, idx) => {
+                          initialValoresAcc[idx] = (acc as any).valor || '';
+                        });
                         setActaData({
                           cedulaUsuario: eq.cedulaUsuario || '',
                           quienEntrega: eq.quienEntrega || user?.username || 'YEIMMY VIVIANA CAICEDO MUÑOZ',
                           cargoQuienEntrega: 'Administrador de Sistemas',
                           responsableAnterior: eq.responsableAnterior || eq.usuarioSucursal || '',
                           valorEstimado: eq.valorEstimado || '4.000.000',
+                          valoresAccesorios: initialValoresAcc,
                           fechaActa: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
                         });
                         setModalType('DOC_SELECT');

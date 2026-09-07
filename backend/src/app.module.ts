@@ -6,6 +6,7 @@ import { ConexionModule } from './config/conexion/conexion.module';
 import { PublicoModule } from './modules/publico/publico.module';
 import { PrivadoModule } from './modules/privado/privado.module';
 import { Seguridad } from './middleware/seguridad/seguridad';
+import { KeepAliveService } from './utilities/servicios/keep-alive.service';
 
 @Module({
   imports: [
@@ -15,10 +16,11 @@ import { Seguridad } from './middleware/seguridad/seguridad';
     PrivadoModule
   ],
   controllers: [AppController],
-  providers: [AppService]
+  providers: [AppService, KeepAliveService]
 })
 export class AppModule implements NestModule {
   public configure(consumer: MiddlewareConsumer) {
     consumer.apply(Seguridad).forRoutes('private');
   }
 }
+
