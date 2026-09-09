@@ -31,7 +31,12 @@ import {
   FileText,
   FileSignature,
   ArrowLeft,
-  Layers
+  Layers,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Loader
 } from 'lucide-react';
 
 export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
@@ -53,9 +58,19 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
-  // Estados de Carga
+  // Estados de Carga y Bloqueo de Doble Clic
   const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Estados de Paginación para cada tabla y cronograma
+  const [pageInventory, setPageInventory] = useState(1);
+  const [pageMaintenance, setPageMaintenance] = useState(1);
+  const [pageSchedule, setPageSchedule] = useState(1);
+  const [pageAgencies, setPageAgencies] = useState(1);
+  const [pageUsers, setPageUsers] = useState(1);
+  const [pageAudit, setPageAudit] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Control de Modales
   const [modalOpen, setModalOpen] = useState(false);
@@ -88,6 +103,15 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
   const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState<'ALL' | 'PC' | 'PHONE'>('ALL');
   const [equipCategory, setEquipCategory] = useState<'PC' | 'PHONE'>('PC');
 
+  // Resetear páginas cuando cambian los filtros
+  useEffect(() => {
+    setPageInventory(1);
+  }, [inventoryCategoryFilter]);
+
+  useEffect(() => {
+    setPageSchedule(1);
+  }, [scheduleAgencyFilter, scheduleStatusFilter, scheduleSearch, scheduleYear]);
+
   // Helper para detectar si un equipo es teléfono
   const isPhone = (eq: any) => {
     const t = String(eq?.tipoEquipo || '').toLowerCase();
@@ -108,6 +132,118 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
       list.push({ tipo: 'Cargador', codigoActivo: '', marca: eq.cargadorMarca || '', modelo: '', serial: eq.cargadorSerial || '' });
     }
     return list;
+  };
+
+  // Componente Reutilizable de Paginación
+  const PaginationBar: React.FC<{
+    currentPage: number;
+    totalItems: number;
+    itemsPerPage: number;
+    onPageChange: (page: number) => void;
+    onItemsPerPageChange?: (limit: number) => void;
+    label?: string;
+  }> = ({ currentPage, totalItems, itemsPerPage, onPageChange, onItemsPerPageChange, label = 'registros' }) => {
+    if (totalItems === 0) return null;
+
+    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+    const getPageNumbers = () => {
+      const pages: (number | string)[] = [];
+      if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        if (currentPage > 3) pages.push('...');
+        const start = Math.max(2, currentPage - 1);
+        const end = Math.min(totalPages - 1, currentPage + 1);
+        for (let i = start; i <= end; i++) pages.push(i);
+        if (currentPage < totalPages - 2) pages.push('...');
+        pages.push(totalPages);
+      }
+      return pages;
+    };
+
+    return (
+      <div className="nm-pagination no-print">
+        <div className="nm-pagination-info">
+          Mostrando <strong>{startItem}</strong> - <strong>{endItem}</strong> de <strong>{totalItems}</strong> {label}
+        </div>
+
+        <div className="nm-pagination-controls">
+          {onItemsPerPageChange && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginRight: '0.5rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Por pág:</span>
+              <select
+                className="nm-pagination-select"
+                value={itemsPerPage}
+                onChange={(e) => {
+                  onItemsPerPageChange(Number(e.target.value));
+                  onPageChange(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          )}
+
+          <button
+            className="nm-page-btn"
+            title="Primera página"
+            disabled={currentPage === 1}
+            onClick={() => onPageChange(1)}
+          >
+            <ChevronsLeft size={14} />
+          </button>
+
+          <button
+            className="nm-page-btn"
+            title="Página anterior"
+            disabled={currentPage === 1}
+            onClick={() => onPageChange(currentPage - 1)}
+          >
+            <ChevronLeft size={14} />
+          </button>
+
+          {getPageNumbers().map((p, idx) => (
+            typeof p === 'number' ? (
+              <button
+                key={idx}
+                className={`nm-page-btn ${currentPage === p ? 'active' : ''}`}
+                onClick={() => onPageChange(p)}
+              >
+                {p}
+              </button>
+            ) : (
+              <span key={idx} style={{ padding: '0 0.2rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                {p}
+              </span>
+            )
+          ))}
+
+          <button
+            className="nm-page-btn"
+            title="Página siguiente"
+            disabled={currentPage === totalPages}
+            onClick={() => onPageChange(currentPage + 1)}
+          >
+            <ChevronRight size={14} />
+          </button>
+
+          <button
+            className="nm-page-btn"
+            title="Última página"
+            disabled={currentPage === totalPages}
+            onClick={() => onPageChange(totalPages)}
+          >
+            <ChevronsRight size={14} />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   // Form Data de Agencias
@@ -236,6 +372,8 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
   // --- CRUD DE AGENCIAS ---
   const handleAgencySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     setActionError(null);
     try {
       if (editId) {
@@ -250,6 +388,8 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
     } catch (err: any) {
       setActionError(err.message);
       showToast('Error al guardar la agencia.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -267,6 +407,8 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
   // --- CRUD DE EQUIPOS ---
   const handleEquipSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     setActionError(null);
     try {
       if (editId) {
@@ -281,6 +423,8 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
     } catch (err: any) {
       setActionError(err.message);
       showToast('Error al guardar el equipo.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -298,6 +442,8 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
   // --- CRUD DE MANTENIMIENTOS ---
   const handleMaintSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     setActionError(null);
     try {
       if (editId) {
@@ -312,6 +458,8 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
     } catch (err: any) {
       setActionError(err.message);
       showToast('Error al guardar mantenimiento.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -329,6 +477,8 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
   // --- CRUD DE USUARIOS ---
   const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     setActionError(null);
     try {
       if (editId) {
@@ -343,6 +493,8 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
     } catch (err: any) {
       setActionError(err.message);
       showToast('Error al guardar el usuario.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -432,6 +584,11 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
               return true;
             });
 
+            const paginatedEquips = filteredEquips.slice(
+              (pageInventory - 1) * itemsPerPage,
+              pageInventory * itemsPerPage
+            );
+
             return (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
@@ -514,318 +671,345 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                 </div>
 
                 {loading ? <p>Cargando inventario...</p> : (
-                  <div className="nm-table-container">
-                    <table>
-                      <thead>
-                        {inventoryCategoryFilter === 'PHONE' ? (
-                          <tr>
-                            <th>N° Inv</th>
-                            <th>Sede / Agencia</th>
-                            <th>Marca / Modelo</th>
-                            <th>N° Línea</th>
-                            <th>IMEI 1</th>
-                            <th>Correo Asignado</th>
-                            <th>Responsable</th>
-                            <th>Vida Útil</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                          </tr>
-                        ) : inventoryCategoryFilter === 'PC' ? (
-                          <tr>
-                            <th>N° Inv</th>
-                            <th>Sede / Agencia</th>
-                            <th>Tipo</th>
-                            <th>Marca / Modelo</th>
-                            <th>Procesador / RAM</th>
-                            <th>Disco Duro</th>
-                            <th>Responsable</th>
-                            <th>Vida Útil</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                          </tr>
-                        ) : (
-                          <tr>
-                            <th>N° Inv</th>
-                            <th>Sede / Agencia</th>
-                            <th>Tipo</th>
-                            <th>Marca / Modelo</th>
-                            <th>Serial / IMEI</th>
-                            <th>Responsable</th>
-                            <th>Vida Útil</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                          </tr>
-                        )}
-                      </thead>
-                      <tbody>
-                        {filteredEquips.map(eq => {
-                          const phone = isPhone(eq);
-                          return (
-                            <tr key={eq.id}>
-                              <td><strong>{eq.noInventario}</strong></td>
-                              <td>{eq.agencia?.nombre || 'N/A'}</td>
-                              
-                              {inventoryCategoryFilter === 'PHONE' ? (
-                                <>
-                                  <td><strong>{eq.marca}</strong> {eq.modelo}</td>
-                                  <td>{eq.numeroLinea ? <strong>{eq.numeroLinea}</strong> : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
-                                  <td style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{eq.imei1 || '-'}</td>
-                                  <td style={{ fontSize: '0.8rem' }}>{eq.correo || '-'}</td>
-                                </>
-                              ) : inventoryCategoryFilter === 'PC' ? (
-                                <>
-                                  <td>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                      <Laptop size={13} style={{ color: 'var(--primary-light)' }} />
-                                      {eq.tipoEquipo}
-                                    </span>
-                                  </td>
-                                  <td><strong>{eq.marca}</strong> {eq.modelo}</td>
-                                  <td style={{ fontSize: '0.8rem' }}>{eq.procesador || '-'} / {eq.memoriaRam || '-'}</td>
-                                  <td style={{ fontSize: '0.8rem' }}>{eq.discoDuro || '-'}</td>
-                                </>
-                              ) : (
-                                <>
-                                  <td>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                      {phone ? <Smartphone size={13} style={{ color: '#10b981' }} /> : <Laptop size={13} style={{ color: 'var(--primary-light)' }} />}
-                                      {eq.tipoEquipo}
-                                    </span>
-                                  </td>
-                                  <td><strong>{eq.marca}</strong> {eq.modelo}</td>
-                                  <td style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{phone ? (eq.imei1 || eq.numeroLinea || '-') : (eq.serial || '-')}</td>
-                                </>
-                              )}
-
-                              <td>{eq.usuarioSucursal || 'Sin asignar'}</td>
-                              <td><span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{eq.vidaUtil || '3 años'}</span></td>
-                              <td>
-                                <span style={{
-                                  padding: '0.2rem 0.5rem',
-                                  borderRadius: '4px',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 700,
-                                  backgroundColor: eq.estado === 'Inactivo' || eq.estado === 'Dado de baja' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                                  color: eq.estado === 'Inactivo' || eq.estado === 'Dado de baja' ? 'var(--error)' : 'var(--success)'
-                                }}>
-                                  {eq.estado || 'Activo'}
-                                </span>
-                              </td>
-                              <td>
-                                <div style={{ display: 'flex', gap: '0.35rem' }}>
-                                  <button
-                                    className="nm-btn"
-                                    style={{ padding: '0.4rem', color: '#3b82f6' }}
-                                    title="Generar Documentos Oficiales (Hoja de Vida / Acta de Entrega)"
-                                    onClick={() => {
-                                      setSelectedEquipmentForHoja(eq);
-                                      setSelectedEquipmentDetail(eq);
-                                      const accs = getEquipmentAccessories(eq);
-                                      const initialValoresAcc: Record<number, string> = {};
-                                      accs.forEach((acc, idx) => {
-                                        initialValoresAcc[idx] = (acc as any).valor || '';
-                                      });
-                                      setActaData({
-                                        cedulaUsuario: eq.cedulaUsuario || '',
-                                        quienEntrega: eq.quienEntrega || user?.username || 'YEIMMY VIVIANA CAICEDO MUÑOZ',
-                                        cargoQuienEntrega: 'Administrador de Sistemas',
-                                        responsableAnterior: eq.responsableAnterior || eq.usuarioSucursal || '',
-                                        valorEstimado: eq.valorEstimado || '4.000.000',
-                                        valoresAccesorios: initialValoresAcc,
-                                        fechaActa: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
-                                      });
-                                      setModalType('DOC_SELECT');
-                                      setModalOpen(true);
-                                    }}
-                                  >
-                                    <FileText size={14} />
-                                  </button>
-                                  <button
-                                    className="nm-btn"
-                                    style={{ padding: '0.4rem' }}
-                                    title="Ver detalles técnicos"
-                                    onClick={() => {
-                                      setSelectedEquipmentDetail(eq);
-                                      setModalType('EQUIPMENT_DETAIL');
-                                      setModalOpen(true);
-                                    }}
-                                  >
-                                    <Eye size={14} />
-                                  </button>
-                                  <button
-                                    className="nm-btn"
-                                    style={{ padding: '0.4rem' }}
-                                    title="Editar"
-                                    onClick={() => {
-                                      setEditId(eq.id);
-                                      setEquipCategory(isPhone(eq) ? 'PHONE' : 'PC');
-                                      setEquipForm({
-                                        idAgencia: eq.idAgencia || agencies[0]?.id || '',
-                                        noInventario: eq.noInventario || '',
-                                        tipoEquipo: eq.tipoEquipo || 'Computador',
-                                        marca: eq.marca || '',
-                                        referencia: eq.referencia || '',
-                                        modelo: eq.modelo || '',
-                                        vidaUtil: eq.vidaUtil || '3 años',
-                                        fechaCompra: eq.fechaCompra || '',
-                                        ubicacion: eq.ubicacion || '',
-                                        reubicacion: eq.reubicacion || 'N/A',
-                                        estado: eq.estado || 'Activo',
-                                        procesador: eq.procesador || '',
-                                        discoDuro: eq.discoDuro || '',
-                                        memoriaRam: eq.memoriaRam || '',
-                                        uniDvd: eq.uniDvd || 'N/A',
-                                        serial: eq.serial || '',
-                                        areaSucursal: eq.areaSucursal || '',
-                                        cargo: eq.cargo || '',
-                                        usuarioSucursal: eq.usuarioSucursal || '',
-                                        mouse: eq.mouse || '',
-                                        teclado: eq.teclado || '',
-                                        impresora: eq.impresora || '',
-                                        otros: eq.otros || '',
-                                        imei1: eq.imei1 || '',
-                                        imei2: eq.imei2 || '',
-                                        numeroLinea: eq.numeroLinea || '',
-                                        imeiSimcard: eq.imeiSimcard || '',
-                                        correo: eq.correo || '',
-                                        claveCorreo: eq.claveCorreo || '',
-                                        appLock: eq.appLock || 'N/A',
-                                        cargadorMarca: eq.cargadorMarca || '',
-                                        cargadorSerial: eq.cargadorSerial || '',
-                                        cargadorFechaCompra: eq.cargadorFechaCompra || '',
-                                        observaciones: eq.observaciones || '',
-                                        accesorios: (() => {
-                                          const accs = getEquipmentAccessories(eq);
-                                          return accs.length > 0
-                                            ? accs.map((a, i) => ({ id: i + 1, tipo: a.tipo || '', codigoActivo: a.codigoActivo || '', marca: a.marca || '', modelo: a.modelo || '', serial: a.serial || '' }))
-                                            : [{ id: 1, tipo: isPhone(eq) ? 'Cargador' : 'Teclado', codigoActivo: '', marca: '', modelo: '', serial: '' }];
-                                        })()
-                                      });
-                                      setModalType('EQUIPMENT');
-                                      setModalOpen(true);
-                                    }}
-                                  >
-                                    <Edit2 size={14} />
-                                  </button>
-                                  {user?.rol === 'super_admin' && (
-                                    <button className="nm-btn nm-btn-danger" style={{ padding: '0.4rem' }} onClick={() => handleEquipDelete(eq.id)}>
-                                      <Trash2 size={14} style={{ color: 'var(--error)' }} />
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
+                  <>
+                    <div className="nm-table-container">
+                      <table>
+                        <thead>
+                          {inventoryCategoryFilter === 'PHONE' ? (
+                            <tr>
+                              <th>N° Inv</th>
+                              <th>Sede / Agencia</th>
+                              <th>Marca / Modelo</th>
+                              <th>N° Línea</th>
+                              <th>IMEI 1</th>
+                              <th>Correo Asignado</th>
+                              <th>Responsable</th>
+                              <th>Vida Útil</th>
+                              <th>Estado</th>
+                              <th>Acciones</th>
                             </tr>
-                          );
-                        })}
-                        {filteredEquips.length === 0 && (
-                          <tr>
-                            <td colSpan={10} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay equipos registrados en esta categoría.</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                          ) : inventoryCategoryFilter === 'PC' ? (
+                            <tr>
+                              <th>N° Inv</th>
+                              <th>Sede / Agencia</th>
+                              <th>Tipo</th>
+                              <th>Marca / Modelo</th>
+                              <th>Procesador / RAM</th>
+                              <th>Disco Duro</th>
+                              <th>Responsable</th>
+                              <th>Vida Útil</th>
+                              <th>Estado</th>
+                              <th>Acciones</th>
+                            </tr>
+                          ) : (
+                            <tr>
+                              <th>N° Inv</th>
+                              <th>Sede / Agencia</th>
+                              <th>Tipo</th>
+                              <th>Marca / Modelo</th>
+                              <th>Serial / IMEI</th>
+                              <th>Responsable</th>
+                              <th>Vida Útil</th>
+                              <th>Estado</th>
+                              <th>Acciones</th>
+                            </tr>
+                          )}
+                        </thead>
+                        <tbody>
+                          {paginatedEquips.map(eq => {
+                            const phone = isPhone(eq);
+                            return (
+                              <tr key={eq.id}>
+                                <td><strong>{eq.noInventario}</strong></td>
+                                <td>{eq.agencia?.nombre || 'N/A'}</td>
+                                
+                                {inventoryCategoryFilter === 'PHONE' ? (
+                                  <>
+                                    <td><strong>{eq.marca}</strong> {eq.modelo}</td>
+                                    <td>{eq.numeroLinea ? <strong>{eq.numeroLinea}</strong> : <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
+                                    <td style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{eq.imei1 || '-'}</td>
+                                    <td style={{ fontSize: '0.8rem' }}>{eq.correo || '-'}</td>
+                                  </>
+                                ) : inventoryCategoryFilter === 'PC' ? (
+                                  <>
+                                    <td>
+                                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                        <Laptop size={13} style={{ color: 'var(--primary-light)' }} />
+                                        {eq.tipoEquipo}
+                                      </span>
+                                    </td>
+                                    <td><strong>{eq.marca}</strong> {eq.modelo}</td>
+                                    <td style={{ fontSize: '0.8rem' }}>{eq.procesador || '-'} / {eq.memoriaRam || '-'}</td>
+                                    <td style={{ fontSize: '0.8rem' }}>{eq.discoDuro || '-'}</td>
+                                  </>
+                                ) : (
+                                  <>
+                                    <td>
+                                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                        {phone ? <Smartphone size={13} style={{ color: '#10b981' }} /> : <Laptop size={13} style={{ color: 'var(--primary-light)' }} />}
+                                        {eq.tipoEquipo}
+                                      </span>
+                                    </td>
+                                    <td><strong>{eq.marca}</strong> {eq.modelo}</td>
+                                    <td style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>{phone ? (eq.imei1 || eq.numeroLinea || '-') : (eq.serial || '-')}</td>
+                                  </>
+                                )}
+
+                                <td>{eq.usuarioSucursal || 'Sin asignar'}</td>
+                                <td><span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{eq.vidaUtil || '3 años'}</span></td>
+                                <td>
+                                  <span style={{
+                                    padding: '0.2rem 0.5rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    backgroundColor: eq.estado === 'Inactivo' || eq.estado === 'Dado de baja' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                                    color: eq.estado === 'Inactivo' || eq.estado === 'Dado de baja' ? 'var(--error)' : 'var(--success)'
+                                  }}>
+                                    {eq.estado || 'Activo'}
+                                  </span>
+                                </td>
+                                <td>
+                                  <div style={{ display: 'flex', gap: '0.35rem' }}>
+                                    <button
+                                      className="nm-btn"
+                                      style={{ padding: '0.4rem', color: '#3b82f6' }}
+                                      title="Generar Documentos Oficiales (Hoja de Vida / Acta de Entrega)"
+                                      onClick={() => {
+                                        setSelectedEquipmentForHoja(eq);
+                                        setSelectedEquipmentDetail(eq);
+                                        const accs = getEquipmentAccessories(eq);
+                                        const initialValoresAcc: Record<number, string> = {};
+                                        accs.forEach((acc, idx) => {
+                                          initialValoresAcc[idx] = (acc as any).valor || '';
+                                        });
+                                        setActaData({
+                                          cedulaUsuario: eq.cedulaUsuario || '',
+                                          quienEntrega: eq.quienEntrega || user?.username || 'YEIMMY VIVIANA CAICEDO MUÑOZ',
+                                          cargoQuienEntrega: 'Administrador de Sistemas',
+                                          responsableAnterior: eq.responsableAnterior || eq.usuarioSucursal || '',
+                                          valorEstimado: eq.valorEstimado || '4.000.000',
+                                          valoresAccesorios: initialValoresAcc,
+                                          fechaActa: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+                                        });
+                                        setModalType('DOC_SELECT');
+                                        setModalOpen(true);
+                                      }}
+                                    >
+                                      <FileText size={14} />
+                                    </button>
+                                    <button
+                                      className="nm-btn"
+                                      style={{ padding: '0.4rem' }}
+                                      title="Ver detalles técnicos"
+                                      onClick={() => {
+                                        setSelectedEquipmentDetail(eq);
+                                        setModalType('EQUIPMENT_DETAIL');
+                                        setModalOpen(true);
+                                      }}
+                                    >
+                                      <Eye size={14} />
+                                    </button>
+                                    <button
+                                      className="nm-btn"
+                                      style={{ padding: '0.4rem' }}
+                                      title="Editar"
+                                      onClick={() => {
+                                        setEditId(eq.id);
+                                        setEquipCategory(isPhone(eq) ? 'PHONE' : 'PC');
+                                        setEquipForm({
+                                          idAgencia: eq.idAgencia || agencies[0]?.id || '',
+                                          noInventario: eq.noInventario || '',
+                                          tipoEquipo: eq.tipoEquipo || 'Computador',
+                                          marca: eq.marca || '',
+                                          referencia: eq.referencia || '',
+                                          modelo: eq.modelo || '',
+                                          vidaUtil: eq.vidaUtil || '3 años',
+                                          fechaCompra: eq.fechaCompra || '',
+                                          ubicacion: eq.ubicacion || '',
+                                          reubicacion: eq.reubicacion || 'N/A',
+                                          estado: eq.estado || 'Activo',
+                                          procesador: eq.procesador || '',
+                                          discoDuro: eq.discoDuro || '',
+                                          memoriaRam: eq.memoriaRam || '',
+                                          uniDvd: eq.uniDvd || 'N/A',
+                                          serial: eq.serial || '',
+                                          areaSucursal: eq.areaSucursal || '',
+                                          cargo: eq.cargo || '',
+                                          usuarioSucursal: eq.usuarioSucursal || '',
+                                          mouse: eq.mouse || '',
+                                          teclado: eq.teclado || '',
+                                          impresora: eq.impresora || '',
+                                          otros: eq.otros || '',
+                                          imei1: eq.imei1 || '',
+                                          imei2: eq.imei2 || '',
+                                          numeroLinea: eq.numeroLinea || '',
+                                          imeiSimcard: eq.imeiSimcard || '',
+                                          correo: eq.correo || '',
+                                          claveCorreo: eq.claveCorreo || '',
+                                          appLock: eq.appLock || 'N/A',
+                                          cargadorMarca: eq.cargadorMarca || '',
+                                          cargadorSerial: eq.cargadorSerial || '',
+                                          cargadorFechaCompra: eq.cargadorFechaCompra || '',
+                                          observaciones: eq.observaciones || '',
+                                          accesorios: (() => {
+                                            const accs = getEquipmentAccessories(eq);
+                                            return accs.length > 0
+                                              ? accs.map((a, i) => ({ id: i + 1, tipo: a.tipo || '', codigoActivo: a.codigoActivo || '', marca: a.marca || '', modelo: a.modelo || '', serial: a.serial || '' }))
+                                              : [{ id: 1, tipo: isPhone(eq) ? 'Cargador' : 'Teclado', codigoActivo: '', marca: '', modelo: '', serial: '' }];
+                                          })()
+                                        });
+                                        setModalType('EQUIPMENT');
+                                        setModalOpen(true);
+                                      }}
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                    {user?.rol === 'super_admin' && (
+                                      <button className="nm-btn nm-btn-danger" style={{ padding: '0.4rem' }} onClick={() => handleEquipDelete(eq.id)}>
+                                        <Trash2 size={14} style={{ color: 'var(--error)' }} />
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {filteredEquips.length === 0 && (
+                            <tr>
+                              <td colSpan={10} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay equipos registrados en esta categoría.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    <PaginationBar
+                      currentPage={pageInventory}
+                      totalItems={filteredEquips.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setPageInventory}
+                      onItemsPerPageChange={setItemsPerPage}
+                      label="equipos"
+                    />
+                  </>
                 )}
               </div>
             );
           })()}
 
           {/* MANTENIMIENTO TAB */}
-          {activeTab === 'MAINTENANCE' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                  <h2 className="heading-font" style={{ fontSize: '1.5rem' }}>Registro de Mantenimientos</h2>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Control de hojas de mantenimiento correctivo y preventivo</p>
-                </div>
-                <button className="nm-btn nm-btn-primary" onClick={() => {
-                  setEditId(null);
-                  setMaintForm({
-                    idEquipo: equipments[0]?.id || '',
-                    fecha: new Date().toISOString().substring(0, 10),
-                    tipo: 'PREVENTIVO',
-                    descripcion: '',
-                    realizadoPor: '',
-                    observaciones: ''
-                  });
-                  setModalType('MAINTENANCE');
-                  setModalOpen(true);
-                }}>
-                  <Plus size={16} /> Nuevo Registro
-                </button>
-              </div>
+          {activeTab === 'MAINTENANCE' && (() => {
+            const paginatedMaintenances = maintenances.slice(
+              (pageMaintenance - 1) * itemsPerPage,
+              pageMaintenance * itemsPerPage
+            );
 
-              {loading ? <p>Cargando mantenimientos...</p> : (
-                <div className="nm-table-container">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Fecha</th>
-                        <th>Equipo (N° Inv)</th>
-                        <th>Tipo</th>
-                        <th>Descripción</th>
-                        <th>Técnico</th>
-                        <th>Observaciones</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {maintenances.map(m => (
-                        <tr key={m.id}>
-                          <td><strong>{new Date(m.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' })}</strong></td>
-                          <td>{m.equipo?.tipoEquipo} ({m.equipo?.noInventario})</td>
-                          <td>
-                            <span style={{
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '4px',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              backgroundColor: m.tipo === 'PREVENTIVO' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                              color: m.tipo === 'PREVENTIVO' ? 'var(--success)' : 'var(--error)'
-                            }}>
-                              {m.tipo}
-                            </span>
-                          </td>
-                          <td style={{ whiteSpace: 'normal', maxWidth: '250px' }}>{m.descripcion}</td>
-                          <td>{m.realizadoPor}</td>
-                          <td style={{ whiteSpace: 'normal', maxWidth: '200px', color: 'var(--text-muted)' }}>{m.observaciones || 'N/A'}</td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button className="nm-btn" style={{ padding: '0.4rem' }} onClick={() => {
-                                setEditId(m.id);
-                                setMaintForm({
-                                  idEquipo: m.idEquipo,
-                                  fecha: new Date(m.fecha).toISOString().substring(0, 10),
-                                  tipo: m.tipo,
-                                  descripcion: m.descripcion,
-                                  realizadoPor: m.realizadoPor,
-                                  observaciones: m.observaciones || ''
-                                });
-                                setModalType('MAINTENANCE');
-                                setModalOpen(true);
-                              }}>
-                                <Edit2 size={14} />
-                              </button>
-                              {user?.rol === 'super_admin' && (
-                                <button className="nm-btn nm-btn-danger" style={{ padding: '0.4rem' }} onClick={() => handleMaintDelete(m.id)}>
-                                  <Trash2 size={14} style={{ color: 'var(--error)' }} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {maintenances.length === 0 && (
-                        <tr>
-                          <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay mantenimientos registrados.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+            return (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                  <div>
+                    <h2 className="heading-font" style={{ fontSize: '1.5rem' }}>Registro de Mantenimientos</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Control de hojas de mantenimiento correctivo y preventivo</p>
+                  </div>
+                  <button className="nm-btn nm-btn-primary" onClick={() => {
+                    setEditId(null);
+                    setMaintForm({
+                      idEquipo: equipments[0]?.id || '',
+                      fecha: new Date().toISOString().substring(0, 10),
+                      tipo: 'PREVENTIVO',
+                      descripcion: '',
+                      realizadoPor: '',
+                      observaciones: ''
+                    });
+                    setModalType('MAINTENANCE');
+                    setModalOpen(true);
+                  }}>
+                    <Plus size={16} /> Nuevo Registro
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
+
+                {loading ? <p>Cargando mantenimientos...</p> : (
+                  <>
+                    <div className="nm-table-container">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Fecha</th>
+                            <th>Equipo (N° Inv)</th>
+                            <th>Tipo</th>
+                            <th>Descripción</th>
+                            <th>Técnico</th>
+                            <th>Observaciones</th>
+                            <th>Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedMaintenances.map(m => (
+                            <tr key={m.id}>
+                              <td><strong>{new Date(m.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' })}</strong></td>
+                              <td>{m.equipo?.tipoEquipo} ({m.equipo?.noInventario})</td>
+                              <td>
+                                <span style={{
+                                  padding: '0.2rem 0.5rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  backgroundColor: m.tipo === 'PREVENTIVO' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                  color: m.tipo === 'PREVENTIVO' ? 'var(--success)' : 'var(--error)'
+                                }}>
+                                  {m.tipo}
+                                </span>
+                              </td>
+                              <td style={{ whiteSpace: 'normal', maxWidth: '250px' }}>{m.descripcion}</td>
+                              <td>{m.realizadoPor}</td>
+                              <td style={{ whiteSpace: 'normal', maxWidth: '200px', color: 'var(--text-muted)' }}>{m.observaciones || 'N/A'}</td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <button className="nm-btn" style={{ padding: '0.4rem' }} onClick={() => {
+                                    setEditId(m.id);
+                                    setMaintForm({
+                                      idEquipo: m.idEquipo,
+                                      fecha: new Date(m.fecha).toISOString().substring(0, 10),
+                                      tipo: m.tipo,
+                                      descripcion: m.descripcion,
+                                      realizadoPor: m.realizadoPor,
+                                      observaciones: m.observaciones || ''
+                                    });
+                                    setModalType('MAINTENANCE');
+                                    setModalOpen(true);
+                                  }}>
+                                    <Edit2 size={14} />
+                                  </button>
+                                  {user?.rol === 'super_admin' && (
+                                    <button className="nm-btn nm-btn-danger" style={{ padding: '0.4rem' }} onClick={() => handleMaintDelete(m.id)}>
+                                      <Trash2 size={14} style={{ color: 'var(--error)' }} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                          {maintenances.length === 0 && (
+                            <tr>
+                              <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay mantenimientos registrados.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    <PaginationBar
+                      currentPage={pageMaintenance}
+                      totalItems={maintenances.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setPageMaintenance}
+                      onItemsPerPageChange={setItemsPerPage}
+                      label="mantenimientos"
+                    />
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           {/* CRONOGRAMA TAB (OPCION 1: TIMELINE SEMESTRAL GANTT) */}
           {activeTab === 'SCHEDULE' && (() => {
@@ -905,6 +1089,8 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
               }
               return true;
             });
+
+            const paginatedSchedule = filteredSchedule.slice((pageSchedule - 1) * itemsPerPage, pageSchedule * itemsPerPage);
 
             return (
               <div>
@@ -990,7 +1176,10 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                       placeholder="Buscar por inventario, usuario o modelo..."
                       style={{ paddingLeft: '2.4rem', fontSize: '0.85rem' }}
                       value={scheduleSearch}
-                      onChange={(e) => setScheduleSearch(e.target.value)}
+                      onChange={(e) => {
+                        setScheduleSearch(e.target.value);
+                        setPageSchedule(1);
+                      }}
                     />
                   </div>
 
@@ -1000,7 +1189,10 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                       className="nm-select"
                       style={{ width: 'auto', padding: '0.5rem 0.8rem', fontSize: '0.85rem' }}
                       value={scheduleAgencyFilter}
-                      onChange={(e) => setScheduleAgencyFilter(e.target.value)}
+                      onChange={(e) => {
+                        setScheduleAgencyFilter(e.target.value);
+                        setPageSchedule(1);
+                      }}
                     >
                       <option value="ALL">Todas las Sedes</option>
                       {agencies.map((a) => (
@@ -1014,7 +1206,10 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                       className="nm-select"
                       style={{ width: 'auto', padding: '0.5rem 0.8rem', fontSize: '0.85rem' }}
                       value={scheduleStatusFilter}
-                      onChange={(e) => setScheduleStatusFilter(e.target.value)}
+                      onChange={(e) => {
+                        setScheduleStatusFilter(e.target.value);
+                        setPageSchedule(1);
+                      }}
                     >
                       <option value="ALL">Todos los Estados</option>
                       <option value="VENCIDO">🔴 Solo Vencidos</option>
@@ -1063,7 +1258,7 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                     </div>
 
                     {/* Filas de Equipos */}
-                    {filteredSchedule.map((item) => {
+                    {paginatedSchedule.map((item) => {
                       const eq = item.equipment;
 
                       let lastPercent: number | null = null;
@@ -1251,7 +1446,7 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
 
                 {/* Vista Móvil (≤768px): Tarjetas Verticales sin Scroll Horizontal */}
                 <div className="timeline-mobile-view">
-                  {filteredSchedule.map((item) => {
+                  {paginatedSchedule.map((item) => {
                     const eq = item.equipment;
                     return (
                       <div key={'mob-' + eq.id} className="nm-card" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -1347,193 +1542,256 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                     <p>No se encontraron equipos que coincidan con los filtros seleccionados.</p>
                   </div>
                 )}
+
+                <PaginationBar
+                  currentPage={pageSchedule}
+                  totalItems={filteredSchedule.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={(p) => setPageSchedule(p)}
+                  onItemsPerPageChange={(limit) => {
+                    setItemsPerPage(limit);
+                    setPageSchedule(1);
+                  }}
+                  label="equipos en cronograma"
+                />
               </div>
             );
           })()}
 
           {/* AGENCIAS TAB */}
-          {activeTab === 'AGENCIES' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                  <h2 className="heading-font" style={{ fontSize: '1.5rem' }}>Agencias </h2>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Administración de oficinas y agencias de la operadora</p>
+          {activeTab === 'AGENCIES' && (() => {
+            const paginatedAgencies = agencies.slice((pageAgencies - 1) * itemsPerPage, pageAgencies * itemsPerPage);
+            return (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                  <div>
+                    <h2 className="heading-font" style={{ fontSize: '1.5rem' }}>Agencias </h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Administración de oficinas y agencias de la operadora</p>
+                  </div>
+                  <button className="nm-btn nm-btn-primary" onClick={() => {
+                    setEditId(null);
+                    setAgencyForm({ nombre: '' });
+                    setModalType('AGENCY');
+                    setModalOpen(true);
+                  }}>
+                    <Plus size={16} /> Nueva Agencia
+                  </button>
                 </div>
-                <button className="nm-btn nm-btn-primary" onClick={() => {
-                  setEditId(null);
-                  setAgencyForm({ nombre: '' });
-                  setModalType('AGENCY');
-                  setModalOpen(true);
-                }}>
-                  <Plus size={16} /> Nueva Agencia
-                </button>
-              </div>
 
-              {loading ? <p>Cargando agencias...</p> : (
-                <div className="nm-table-container" style={{ maxWidth: '600px' }}>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Nombre de la Agencia</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {agencies.map(a => (
-                        <tr key={a.id}>
-                          <td><strong>{a.nombre}</strong></td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button className="nm-btn" style={{ padding: '0.4rem' }} onClick={() => {
-                                setEditId(a.id);
-                                setAgencyForm({ nombre: a.nombre });
-                                setModalType('AGENCY');
-                                setModalOpen(true);
-                              }}>
-                                <Edit2 size={14} />
-                              </button>
-                              {user?.rol === 'super_admin' && (
-                                <button className="nm-btn nm-btn-danger" style={{ padding: '0.4rem' }} onClick={() => handleAgencyDelete(a.id)}>
-                                  <Trash2 size={14} style={{ color: 'var(--error)' }} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {agencies.length === 0 && (
-                        <tr>
-                          <td colSpan={2} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay agencias creadas.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+                {loading ? <p>Cargando agencias...</p> : (
+                  <>
+                    <div className="nm-table-container" style={{ maxWidth: '600px' }}>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Nombre de la Agencia</th>
+                            <th>Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedAgencies.map(a => (
+                            <tr key={a.id}>
+                              <td><strong>{a.nombre}</strong></td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <button className="nm-btn" style={{ padding: '0.4rem' }} onClick={() => {
+                                    setEditId(a.id);
+                                    setAgencyForm({ nombre: a.nombre });
+                                    setModalType('AGENCY');
+                                    setModalOpen(true);
+                                  }}>
+                                    <Edit2 size={14} />
+                                  </button>
+                                  {user?.rol === 'super_admin' && (
+                                    <button className="nm-btn nm-btn-danger" style={{ padding: '0.4rem' }} onClick={() => handleAgencyDelete(a.id)}>
+                                      <Trash2 size={14} style={{ color: 'var(--error)' }} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                          {agencies.length === 0 && (
+                            <tr>
+                              <td colSpan={2} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay agencias creadas.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <PaginationBar
+                      currentPage={pageAgencies}
+                      totalItems={agencies.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={(p) => setPageAgencies(p)}
+                      onItemsPerPageChange={(limit) => {
+                        setItemsPerPage(limit);
+                        setPageAgencies(1);
+                      }}
+                      label="agencias"
+                    />
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           {/* USUARIOS TAB */}
-          {activeTab === 'USERS' && user?.rol === 'super_admin' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <div>
-                  <h2 className="heading-font" style={{ fontSize: '1.5rem' }}>Gestión de Usuarios</h2>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Usuarios autorizados para editar y administrar inventarios</p>
+          {activeTab === 'USERS' && user?.rol === 'super_admin' && (() => {
+            const paginatedUsers = users.slice((pageUsers - 1) * itemsPerPage, pageUsers * itemsPerPage);
+            return (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                  <div>
+                    <h2 className="heading-font" style={{ fontSize: '1.5rem' }}>Gestión de Usuarios</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Usuarios autorizados para editar y administrar inventarios</p>
+                  </div>
+                  <button className="nm-btn nm-btn-primary" onClick={() => {
+                    setEditId(null);
+                    setUserForm({ username: '', password: '', role: 'editor' });
+                    setModalType('USER');
+                    setModalOpen(true);
+                  }}>
+                    <Plus size={16} /> Agregar Usuario
+                  </button>
                 </div>
-                <button className="nm-btn nm-btn-primary" onClick={() => {
-                  setEditId(null);
-                  setUserForm({ username: '', password: '', role: 'editor' });
-                  setModalType('USER');
-                  setModalOpen(true);
-                }}>
-                  <Plus size={16} /> Agregar Usuario
-                </button>
-              </div>
 
-              {loading ? <p>Cargando usuarios...</p> : (
-                <div className="nm-table-container">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Nombre de Usuario</th>
-                        <th>Rol</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {users.map(u => (
-                        <tr key={u.id}>
-                          <td><strong>{u.username}</strong></td>
-                          <td>
-                            <span style={{ fontWeight: 600, color: u.role === 'super_admin' ? 'var(--accent)' : 'var(--primary-light)' }}>
-                              {u.role === 'super_admin' ? 'Super Admin' : 'Editor'}
-                            </span>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                              <button className="nm-btn" style={{ padding: '0.4rem' }} onClick={() => {
-                                setEditId(u.id);
-                                setUserForm({ username: u.username, password: '', role: u.role });
-                                setModalType('USER');
-                                setModalOpen(true);
-                              }}>
-                                <Edit2 size={14} />
-                              </button>
-                              <button className="nm-btn nm-btn-danger" style={{ padding: '0.4rem' }} onClick={() => handleUserDelete(u.id)}>
-                                <Trash2 size={14} style={{ color: 'var(--error)' }} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+                {loading ? <p>Cargando usuarios...</p> : (
+                  <>
+                    <div className="nm-table-container">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Nombre de Usuario</th>
+                            <th>Rol</th>
+                            <th>Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedUsers.map(u => (
+                            <tr key={u.id}>
+                              <td><strong>{u.username}</strong></td>
+                              <td>
+                                <span style={{ fontWeight: 600, color: u.role === 'super_admin' ? 'var(--accent)' : 'var(--primary-light)' }}>
+                                  {u.role === 'super_admin' ? 'Super Admin' : 'Editor'}
+                                </span>
+                              </td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <button className="nm-btn" style={{ padding: '0.4rem' }} onClick={() => {
+                                    setEditId(u.id);
+                                    setUserForm({ username: u.username, password: '', role: u.role });
+                                    setModalType('USER');
+                                    setModalOpen(true);
+                                  }}>
+                                    <Edit2 size={14} />
+                                  </button>
+                                  <button className="nm-btn nm-btn-danger" style={{ padding: '0.4rem' }} onClick={() => handleUserDelete(u.id)}>
+                                    <Trash2 size={14} style={{ color: 'var(--error)' }} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <PaginationBar
+                      currentPage={pageUsers}
+                      totalItems={users.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={(p) => setPageUsers(p)}
+                      onItemsPerPageChange={(limit) => {
+                        setItemsPerPage(limit);
+                        setPageUsers(1);
+                      }}
+                      label="usuarios"
+                    />
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           {/* AUDITORIA TAB */}
-          {activeTab === 'AUDIT' && user?.rol === 'super_admin' && (
-            <div>
-              <div style={{ marginBottom: '2rem' }}>
-                <h2 className="heading-font" style={{ fontSize: '1.5rem' }}>Bitácora de Cambios (Triggers)</h2>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Historial transaccional auditado automáticamente en Supabase</p>
-              </div>
-
-              {loading ? <p>Cargando bitácora...</p> : (
-                <div className="nm-table-container">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Fecha</th>
-                        <th>Tabla</th>
-                        <th>Acción</th>
-                        <th>Usuario</th>
-                        <th>Detalle</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {auditLogs.map(log => (
-                        <tr key={log.id}>
-                          <td>{new Date(log.createdAt).toLocaleString('es-ES')}</td>
-                          <td><strong>{log.tableName}</strong></td>
-                          <td>
-                            <span style={{
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '4px',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              backgroundColor: log.action === 'INSERT' ? 'rgba(16, 185, 129, 0.15)' : log.action === 'UPDATE' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                              color: log.action === 'INSERT' ? 'var(--success)' : log.action === 'UPDATE' ? 'var(--primary-light)' : 'var(--error)'
-                            }}>
-                              {log.action}
-                            </span>
-                          </td>
-                          <td>{log.user ? log.user.username : 'Sistema/Supabase'}</td>
-                          <td>
-                            <button className="nm-btn" style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem' }} onClick={() => {
-                              setSelectedAuditLog(log);
-                              setModalType('AUDIT_DETAIL');
-                              setModalOpen(true);
-                            }}>
-                              <Eye size={12} style={{ marginRight: '0.2rem' }} /> Ver Datos
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {auditLogs.length === 0 && (
-                        <tr>
-                          <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay registros de auditoría.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+          {activeTab === 'AUDIT' && user?.rol === 'super_admin' && (() => {
+            const paginatedAudit = auditLogs.slice((pageAudit - 1) * itemsPerPage, pageAudit * itemsPerPage);
+            return (
+              <div>
+                <div style={{ marginBottom: '2rem' }}>
+                  <h2 className="heading-font" style={{ fontSize: '1.5rem' }}>Bitácora de Cambios (Triggers)</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Historial transaccional auditado automáticamente en Supabase</p>
                 </div>
-              )}
-            </div>
-          )}
+
+                {loading ? <p>Cargando bitácora...</p> : (
+                  <>
+                    <div className="nm-table-container">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Fecha</th>
+                            <th>Tabla</th>
+                            <th>Acción</th>
+                            <th>Usuario</th>
+                            <th>Detalle</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedAudit.map(log => (
+                            <tr key={log.id}>
+                              <td>{new Date(log.createdAt).toLocaleString('es-ES')}</td>
+                              <td><strong>{log.tableName}</strong></td>
+                              <td>
+                                <span style={{
+                                  padding: '0.2rem 0.5rem',
+                                  borderRadius: '4px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  backgroundColor: log.action === 'INSERT' ? 'rgba(16, 185, 129, 0.15)' : log.action === 'UPDATE' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                  color: log.action === 'INSERT' ? 'var(--success)' : log.action === 'UPDATE' ? 'var(--primary-light)' : 'var(--error)'
+                                }}>
+                                  {log.action}
+                                </span>
+                              </td>
+                              <td>{log.user ? log.user.username : 'Sistema/Supabase'}</td>
+                              <td>
+                                <button className="nm-btn" style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem' }} onClick={() => {
+                                  setSelectedAuditLog(log);
+                                  setModalType('AUDIT_DETAIL');
+                                  setModalOpen(true);
+                                }}>
+                                  <Eye size={12} style={{ marginRight: '0.2rem' }} /> Ver Datos
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                          {auditLogs.length === 0 && (
+                            <tr>
+                              <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>No hay registros de auditoría.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <PaginationBar
+                      currentPage={pageAudit}
+                      totalItems={auditLogs.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={(p) => setPageAudit(p)}
+                      onItemsPerPageChange={(limit) => {
+                        setItemsPerPage(limit);
+                        setPageAudit(1);
+                      }}
+                      label="registros"
+                    />
+                  </>
+                )}
+              </div>
+            );
+          })()}
         </main>
       </div>
 
@@ -1644,7 +1902,9 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                     required
                   />
                 </div>
-                <button type="submit" className="nm-btn nm-btn-primary" style={{ width: '100%' }}>Guardar Agencia</button>
+                <button type="submit" className="nm-btn nm-btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }} disabled={isSubmitting}>
+                  {isSubmitting ? <><Loader className="gear-spin" size={16} /> Guardando...</> : (editId ? 'Actualizar Agencia' : 'Guardar Agencia')}
+                </button>
               </form>
             )}
 
@@ -2150,7 +2410,9 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                   />
                 </div>
 
-                <button type="submit" className="nm-btn nm-btn-primary" style={{ width: '100%', padding: '0.75rem', fontSize: '0.95rem' }}>Guardar Equipo</button>
+                <button type="submit" className="nm-btn nm-btn-primary" style={{ width: '100%', padding: '0.75rem', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }} disabled={isSubmitting}>
+                  {isSubmitting ? <><Loader className="gear-spin" size={16} /> Guardando...</> : (editId ? 'Actualizar Equipo' : 'Guardar Equipo')}
+                </button>
               </form>
             )}
 
@@ -2229,7 +2491,9 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                   />
                 </div>
 
-                <button type="submit" className="nm-btn nm-btn-primary" style={{ width: '100%' }}>Guardar Mantenimiento</button>
+                <button type="submit" className="nm-btn nm-btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }} disabled={isSubmitting}>
+                  {isSubmitting ? <><Loader className="gear-spin" size={16} /> Guardando...</> : (editId ? 'Actualizar Mantenimiento' : 'Guardar Mantenimiento')}
+                </button>
               </form>
             )}
 
@@ -2272,7 +2536,9 @@ export const AdminPanel: React.FC<{ onGoTo404?: () => void }> = () => {
                   </select>
                 </div>
 
-                <button type="submit" className="nm-btn nm-btn-primary" style={{ width: '100%' }}>Guardar Usuario</button>
+                <button type="submit" className="nm-btn nm-btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }} disabled={isSubmitting}>
+                  {isSubmitting ? <><Loader className="gear-spin" size={16} /> Guardando...</> : (editId ? 'Actualizar Usuario' : 'Guardar Usuario')}
+                </button>
               </form>
             )}
 
